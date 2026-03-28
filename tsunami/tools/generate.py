@@ -48,13 +48,48 @@ class GenerateImage(BaseTool):
         p = Path(save_path).expanduser().resolve()
         p.parent.mkdir(parents=True, exist_ok=True)
 
-        # Try backends in order
-        for backend in [self._try_comfyui, self._try_openai_api, self._try_placeholder]:
+        # Try backends in order: diffusion server > DALL-E > placeholder
+        for backend in [self._try_diffusion_server, self._try_openai_api, self._try_placeholder]:
             result = await backend(prompt, p, width, height, style)
             if not result.is_error:
                 return result
 
         return ToolResult("No image generation backend available", is_error=True)
+
+    async def _try_diffusion_server(self, prompt: str, path: Path, w: int, h: int, style: str) -> ToolResult:
+        """Try the TSUNAMI diffusion server (Qwen-Image via Docker)."""
+        try:
+            import httpx
+            async with httpx.AsyncClient(timeout=300) as client:
+                # Health check first
+                try:
+                    resp = await client.get("http://localhost:8091/health")
+                    if resp.status_code != 200:
+                        return ToolResult("Diffusion server not ready", is_error=True)
+                except Exception:
+                    return ToolResult("Diffusion server not running on :8091", is_error=True)
+
+                # Generate
+                resp = await client.post("http://localhost:8091/generate", json={
+                    "prompt": prompt,
+                    "width": w,
+                    "height": h,
+                    "save_path": str(path),
+                    "steps": 30,
+                    "cfg": 4.0,
+                })
+
+                if resp.status_code == 200:
+                    # Server saved the file and returned PNG bytes
+                    if not path.exists():
+                        path.write_bytes(resp.content)
+                    gen_time = resp.headers.get("X-Generation-Time", "?")
+                    return ToolResult(f"Image generated and saved to {path} ({gen_time}s)")
+                else:
+                    error = resp.json().get("error", "unknown error")
+                    return ToolResult(f"Diffusion error: {error}", is_error=True)
+        except Exception as e:
+            return ToolResult(f"Diffusion server error: {e}", is_error=True)
 
     async def _try_comfyui(self, prompt: str, path: Path, w: int, h: int, style: str) -> ToolResult:
         """Try local ComfyUI instance."""

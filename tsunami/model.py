@@ -107,7 +107,7 @@ class OllamaModel(LLMModel):
         if tools:
             payload["tools"] = tools
 
-        async with httpx.AsyncClient(timeout=300) as client:
+        async with httpx.AsyncClient(timeout=900) as client:
             resp = await client.post(f"{self.endpoint}/api/chat", json=payload)
             resp.raise_for_status()
             data = resp.json()
@@ -178,7 +178,7 @@ class OpenAICompatModel(LLMModel):
             payload["tools"] = self._convert_tools(tools)
             payload["tool_choice"] = "auto"
 
-        async with httpx.AsyncClient(timeout=300) as client:
+        async with httpx.AsyncClient(timeout=900) as client:
             resp = await client.post(
                 f"{self.endpoint}/v1/chat/completions",
                 json=payload,

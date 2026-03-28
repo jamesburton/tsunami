@@ -132,7 +132,18 @@ class AgentState:
         The model sees the full history of what it did and what happened.
         """
         msgs = []
+        first_system_done = False
         for m in self.conversation:
+            if m.role == "system":
+                if not first_system_done:
+                    # First system message stays as system
+                    msgs.append({"role": "system", "content": m.content})
+                    first_system_done = True
+                else:
+                    # Later system messages (watcher notes, errors) become user messages
+                    # to avoid Qwen3.5 "system must be first" template error
+                    msgs.append({"role": "user", "content": f"[System note: {m.content}]"})
+                continue
             if m.role == "tool_result":
                 msgs.append({"role": "user", "content": m.content})
             elif m.role == "assistant" and m.tool_call:
