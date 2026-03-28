@@ -6,6 +6,7 @@ import Spinner from 'ink-spinner';
 import WebSocket from 'ws';
 import fs from 'fs';
 import path from 'path';
+import { execSync, spawn } from 'child_process';
 
 // ── Banner: white froth → deep blue water ──
 const BANNER_LINES = [
@@ -143,7 +144,6 @@ function App({ serverUrl, singleTask }) {
     if (cmd === '/project') {
       if (parts.length === 1) {
         // List projects — shell out
-        const { execSync } = require('child_process');
         try {
           const out = execSync('ls -1 workspace/deliverables/ 2>/dev/null', { cwd: path.resolve(__dirname, '..'), encoding: 'utf-8' });
           const dirs = out.trim().split('\n').filter(d => d && !d.startsWith('.'));
@@ -189,7 +189,6 @@ function App({ serverUrl, singleTask }) {
       const serveDir = activeProject
         ? path.resolve(__dirname, '..', 'workspace/deliverables', activeProject)
         : path.resolve(__dirname, '..', 'workspace/deliverables');
-      const { spawn } = require('child_process');
       spawn('python3', ['-m', 'http.server', port, '--directory', serveDir], {
         detached: true, stdio: 'ignore'
       }).unref();
@@ -336,9 +335,26 @@ function App({ serverUrl, singleTask }) {
         </Box>
       )}
 
+      {/* Command suggestions */}
+      {!running && !singleTask && input.startsWith('/') && input.length < 15 && (
+        <Box flexDirection="column" marginLeft={2} marginBottom={0}>
+          {[
+            { cmd: '/project', desc: 'list / switch / create projects' },
+            { cmd: '/serve', desc: 'host active project on localhost' },
+            { cmd: '/attach', desc: 'attach a file or image' },
+            { cmd: '/help', desc: 'show all commands' },
+          ].filter(c => c.cmd.startsWith(input)).map((c, i) => (
+            <Box key={i}>
+              <Text color="#4a9eff">{c.cmd}</Text>
+              <Text dimColor>  {c.desc}</Text>
+            </Box>
+          ))}
+        </Box>
+      )}
+
       {/* Input */}
       {!running && !singleTask && (
-        <Box flexDirection="column" marginTop={1}>
+        <Box flexDirection="column" marginTop={0}>
           <Box
             borderStyle="round"
             borderColor="#4a9eff"
@@ -353,9 +369,11 @@ function App({ serverUrl, singleTask }) {
               placeholder=""
             />
           </Box>
-          <Box marginLeft={2}>
-            <Text dimColor>/attach {'<path>'} to add files · exit to quit · ctrl+d to force quit</Text>
-          </Box>
+          {!input.startsWith('/') && (
+            <Box marginLeft={2}>
+              <Text dimColor>type / for commands · exit to quit</Text>
+            </Box>
+          )}
         </Box>
       )}
     </Box>
