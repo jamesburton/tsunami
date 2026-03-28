@@ -126,12 +126,95 @@ function App({ serverUrl, singleTask }) {
     }
   }, [singleTask, connected]);
 
+  // ── Slash commands — client-side, instant, no agent ──
+  const [activeProject, setActiveProject] = useState(null);
+
+  function handleSlashCommand(text) {
+    const parts = text.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+
+    if (cmd === '/help') {
+      setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text:
+        'Commands:\n  /project              list projects\n  /project <name>       switch to project\n  /project new <name>   create new project\n  /serve [port]         serve active project\n  /help                 this message\n  exit                  quit\n\nAnything else goes to the agent.'
+      }]);
+      return true;
+    }
+
+    if (cmd === '/project') {
+      if (parts.length === 1) {
+        // List projects — shell out
+        const { execSync } = require('child_process');
+        try {
+          const out = execSync('ls -1 workspace/deliverables/ 2>/dev/null', { cwd: path.resolve(__dirname, '..'), encoding: 'utf-8' });
+          const dirs = out.trim().split('\n').filter(d => d && !d.startsWith('.'));
+          const list = dirs.length ? dirs.map(d => {
+            const hasTmd = fs.existsSync(path.resolve(__dirname, '..', 'workspace/deliverables', d, 'tsunami.md'));
+            const active = d === activeProject ? ' ← active' : '';
+            return `  ${hasTmd ? '●' : '○'} ${d}${active}`;
+          }).join('\n') : '  No projects yet. Use /project new <name>';
+          setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text: `Projects:\n${list}` }]);
+        } catch(e) {
+          setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text: 'No projects directory found.' }]);
+        }
+        return true;
+      }
+
+      if (parts[1] === 'new' && parts[2]) {
+        const name = parts[2];
+        const projDir = path.resolve(__dirname, '..', 'workspace/deliverables', name);
+        fs.mkdirSync(projDir, { recursive: true });
+        fs.writeFileSync(path.join(projDir, 'tsunami.md'), `# ${name}\n\nNew project.\n`);
+        setActiveProject(name);
+        setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text: `Created project: ${name}` }]);
+        return true;
+      }
+
+      // Switch project
+      const name = parts[1];
+      const projDir = path.resolve(__dirname, '..', 'workspace/deliverables', name);
+      if (!fs.existsSync(projDir)) {
+        setMessages(prev => [...prev, { type: 'user', text }, { type: 'error', text: `Project '${name}' not found` }]);
+        return true;
+      }
+      setActiveProject(name);
+      const tmdPath = path.join(projDir, 'tsunami.md');
+      const context = fs.existsSync(tmdPath) ? fs.readFileSync(tmdPath, 'utf-8') : 'No tsunami.md';
+      const files = fs.readdirSync(projDir).filter(f => f !== 'tsunami.md');
+      setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text: `Active: ${name}\n\n${context}\n\nFiles: ${files.join(', ') || 'none'}` }]);
+      return true;
+    }
+
+    if (cmd === '/serve') {
+      const port = parts[1] || '8080';
+      const serveDir = activeProject
+        ? path.resolve(__dirname, '..', 'workspace/deliverables', activeProject)
+        : path.resolve(__dirname, '..', 'workspace/deliverables');
+      const { spawn } = require('child_process');
+      spawn('python3', ['-m', 'http.server', port, '--directory', serveDir], {
+        detached: true, stdio: 'ignore'
+      }).unref();
+      setMessages(prev => [...prev, { type: 'user', text }, { type: 'result', text: `Serving on http://localhost:${port}` }]);
+      return true;
+    }
+
+    // Unknown slash command
+    setMessages(prev => [...prev, { type: 'user', text }, { type: 'error', text: `Unknown command: ${cmd}. Type /help` }]);
+    return true;
+  }
+
   const handleSubmit = useCallback((value) => {
     const text = value.trim();
     if (!text && attachedFiles.length === 0) return;
 
-    if (['exit', 'quit', '/exit', '/quit'].includes(text.toLowerCase())) {
+    if (['exit', 'quit'].includes(text.toLowerCase())) {
       exit();
+      return;
+    }
+
+    // Slash commands — instant, no agent
+    if (text.startsWith('/')) {
+      setInput('');
+      handleSlashCommand(text);
       return;
     }
 
