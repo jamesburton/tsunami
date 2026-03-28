@@ -30,7 +30,17 @@ Pre-built CSS templates in `skills/web-builder/templates/`:
   Classes: `.container`, `.card`, `.card-grid`, `.formula`, `.info-box`, `.warning-box`,
   `.controls`, `.control-group`, `.badge-green/yellow/red/blue`, `table`, `code`, `pre`.
 
-Always use a template when building educational or informational pages.
+- **light-clean.css** — Professional light theme for documentation and dashboards.
+  Same class API as dark-edu. White background, subtle shadows, blue accent.
+  Good for: docs, dashboards, printable content, corporate sites.
+
+- **slides-dark.css** — Presentation slide template (16:9 aspect ratio).
+  Each `<section class="slide">` is one slide at 1920x1080.
+  Extra classes: `.slide-title`, `.slide-cols`, `.tag`, `data-slide` attribute for numbering.
+  Screenshot each slide with headless browser for PDF/PPTX export.
+
+All templates share the same class API (card, card-grid, formula, info-box, etc.).
+Always use a template when building educational, informational, or presentation pages.
 
 ## Quality Standards
 
