@@ -39,8 +39,25 @@ Pre-built CSS templates in `skills/web-builder/templates/`:
   Extra classes: `.slide-title`, `.slide-cols`, `.tag`, `data-slide` attribute for numbering.
   Screenshot each slide with headless browser for PDF/PPTX export.
 
+- **landing.css** — Modern dark landing page with hero, features, CTA, stats, testimonials.
+  Extra classes: `.hero`, `.btn`/`.btn-primary`/`.btn-secondary`, `.btn-group`, `.stats`, `.stat`,
+  `.cta`, `.testimonial`, `.section-label`, `.container-narrow`, `nav`, `.card-grid-3`.
+  Good for: product pages, portfolios, marketing sites, SaaS landing pages.
+
+- **animations.css** + **animations.js** — Animation library for any template.
+  CSS: `.animate-on-scroll`, `.animate-fade-in-up`, `.animate-bounce`, `.animate-shimmer`,
+  `.animate-glow`, `.animate-float`, `.hover-lift`, `.hover-glow`, `.glass`, `.gradient-text`,
+  `.stagger` (staggered children), plus 15 @keyframes.
+  JS: `tsunami.particles('canvasId')`, `tsunami.fluid('canvasId')`, `.typewriter`, `.count-up`.
+  Add both files to any project for scroll animations, particle backgrounds, fluid effects,
+  typing animations, and counter animations.
+
 All templates share the same class API (card, card-grid, formula, info-box, etc.).
-Always use a template when building educational, informational, or presentation pages.
+Always use a template when building pages. Choose based on purpose:
+- Educational/technical → dark-edu or light-clean
+- Marketing/product → landing
+- Presentations → slides-dark
+- Add animations.css + animations.js to any template for interactive effects
 
 ## Quality Standards
 
