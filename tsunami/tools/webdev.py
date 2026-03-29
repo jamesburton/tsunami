@@ -182,13 +182,64 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         # index.css
         (project_dir / "src" / "index.css").write_text('@import "tailwindcss";\n')
 
-        # App.tsx placeholder
-        (project_dir / "src" / "App.tsx").write_text('''export default function App() {
+        # Create component directories
+        (project_dir / "src" / "components" / "UI").mkdir(parents=True, exist_ok=True)
+        (project_dir / "src" / "sections").mkdir(parents=True, exist_ok=True)
+        (project_dir / "src" / "data").mkdir(parents=True, exist_ok=True)
+
+        # App.tsx — thin shell that imports sections
+        (project_dir / "src" / "App.tsx").write_text('''import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import HeroSection from './sections/HeroSection'
+
+export default function App() {
   return (
     <div className="min-h-screen bg-gray-950 text-white">
-      <h1 className="text-4xl font-bold text-center pt-20">Hello from TSUNAMI</h1>
-      <p className="text-gray-400 text-center mt-4">Edit src/App.tsx to get started</p>
+      <Navbar />
+      <HeroSection />
+      <Footer />
     </div>
+  )
+}
+''')
+
+        # Navbar component
+        (project_dir / "src" / "components" / "Navbar.tsx").write_text('''export default function Navbar() {
+  return (
+    <nav className="bg-gray-900 bg-opacity-80 backdrop-blur-sm fixed w-full z-50 py-4">
+      <div className="container mx-auto px-4 flex justify-between items-center">
+        <a href="#" className="text-2xl font-bold text-white">Project</a>
+        <div className="hidden md:flex space-x-6">
+          <a href="#features" className="text-gray-300 hover:text-white transition">Features</a>
+          <a href="#about" className="text-gray-300 hover:text-white transition">About</a>
+          <a href="#contact" className="text-gray-300 hover:text-white transition">Contact</a>
+        </div>
+      </div>
+    </nav>
+  )
+}
+''')
+
+        # Footer component
+        (project_dir / "src" / "components" / "Footer.tsx").write_text('''export default function Footer() {
+  return (
+    <footer className="bg-gray-950 text-gray-400 py-12 text-center text-sm">
+      <p>&copy; {new Date().getFullYear()} Built with TSUNAMI</p>
+    </footer>
+  )
+}
+''')
+
+        # Hero section
+        (project_dir / "src" / "sections" / "HeroSection.tsx").write_text('''export default function HeroSection() {
+  return (
+    <section className="relative bg-gray-900 text-white py-32 overflow-hidden">
+      <div className="container mx-auto px-4 text-center">
+        <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">Your Title Here</h1>
+        <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Edit src/sections/HeroSection.tsx to customize.</p>
+        <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-300">Get Started</button>
+      </div>
+    </section>
   )
 }
 ''')

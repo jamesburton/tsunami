@@ -47,34 +47,70 @@ You can:
 
 Item 9 is the most important. Attempt anything computationally possible.
 
-## Web Development
-When building ANY website or web page:
-1. ALWAYS use template CSS files from the project's style.css — never write inline CSS
-2. ALWAYS include animations.css and animations.js if they exist in the project
-3. Use these HTML patterns:
-   - class="animate-on-scroll" on sections for scroll-triggered fade-in
-   - class="hover-lift" on cards for lift-on-hover effect
-   - class="gradient-text" on hero headings for gradient color
-   - class="glass" for glassmorphism cards
-   - class="count-up" data-target="1000" for animated counters
-   - <canvas id="particles" class="canvas-bg"></canvas> + tsunami.particles('particles') for particle backgrounds
-4. Link files in this order in <head>:
-   <link rel="stylesheet" href="style.css">
-   <link rel="stylesheet" href="animations.css">
-   <script src="animations.js" defer></script>
-5. The landing.css template has: .hero, .btn-primary, .btn-secondary, .stats, .cta, .testimonial, nav
-6. The dark-edu.css template has: .card, .card-grid, .formula, .info-box, .warning-box, .controls
-7. Both share: .container, .badge-green/yellow/red/blue, table, pre, code
+## Web Development — Build Process (FOLLOW THIS EXACTLY)
 
-## Web Quality Rules (NEVER violate these):
-- NEVER use href="#" — always link to real anchors (#features, #pricing) or real URLs
-- NEVER invent CSS classes — only use classes defined in the template CSS files
-- Stats MUST use: <div class="stat"><div class="number count-up" data-target="1000">0</div><div class="label">Label</div></div>
-- Nav MUST use plain <nav> tag — the template CSS styles it automatically
-- Every section should have an id attribute for anchor linking
-- Feature cards should have 2-3 sentences minimum, not one-liners
-- Always include a particle canvas in hero: <canvas id="particles" class="canvas-bg"></canvas>
-- Always init particles: <script>document.addEventListener('DOMContentLoaded',()=>tsunami.particles('particles'))</script>""")
+### Phase 1: Scaffold
+Use webdev_scaffold to initialize the project (Vite + React + TypeScript + Tailwind CSS).
+
+### Phase 2: Decompose Into Components
+NEVER write one massive file. Break the page into a component tree:
+```
+src/
+  App.tsx              ← imports and arranges sections
+  components/
+    Navbar.tsx         ← fixed nav with logo and links
+    Footer.tsx         ← footer with links
+    UI/Button.tsx      ← reusable button component
+    UI/Card.tsx        ← reusable card component
+  sections/
+    HeroSection.tsx    ← hero with gradient, title, CTA
+    FeaturesSection.tsx
+    StatsSection.tsx
+    TestimonialsSection.tsx
+    PricingSection.tsx
+    CTASection.tsx
+```
+Write EACH component as a separate file. Keep each under 50 lines.
+App.tsx just imports and arranges them — under 30 lines.
+
+### Phase 3: Data Schema First
+For data-rich pages, define data as a TypeScript array BEFORE building components:
+```typescript
+// src/data/tsunamis.ts
+export const tsunamis = [
+  { name: "Indian Ocean", year: 2004, deaths: 230000, magnitude: "9.1", cause: "Submarine earthquake" },
+  ...
+]
+```
+Write data files first, then build components that map over them.
+
+### Phase 4: Generate Assets
+Use webdev_generate_assets to create ALL images in one batch BEFORE coding the UI.
+
+### Phase 5: Build Components
+Write each component file separately using Tailwind CSS classes. Key patterns:
+
+Hero: className="relative bg-gray-900 text-white py-20 md:py-32 overflow-hidden"
+Cards: className="bg-gray-800 rounded-lg shadow-xl p-6 hover:scale-105 transition duration-300"
+Stats: className="text-5xl font-bold text-indigo-500" for numbers, "text-gray-300 text-lg" for labels
+Nav: className="bg-gray-900 bg-opacity-80 backdrop-blur-sm fixed w-full z-50 py-4"
+CTA: className="text-center py-16 bg-indigo-700"
+Buttons: className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-300"
+Footer: className="bg-gray-950 text-gray-400 py-12"
+
+### Phase 6: Serve and Screenshot
+Use webdev_serve to start the dev server, then webdev_screenshot to SEE the page.
+Check: layout integrity, responsiveness, typography, colors, image rendering, spacing.
+Fix any issues and screenshot again. Do 2-4 screenshot-fix cycles.
+
+## Web Quality Rules (NEVER violate):
+- NEVER write one massive component — decompose into files
+- NEVER use href="#" — always real anchors or URLs
+- Every section needs an id for anchor linking
+- Feature cards need 2-3 sentences, not one-liners
+- Use Tailwind classes exclusively — no custom CSS
+- Stats: text-5xl font-bold for numbers, text-gray-300 for labels
+- Always use webdev_screenshot after building to verify visually""")
 
     # ── Layer 3: Environment ──
     layers.append(f"""# Environment
