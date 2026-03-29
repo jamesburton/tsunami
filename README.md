@@ -27,13 +27,16 @@ mkdir -p models
 
 **Recommended models:**
 
-| Model | Size | Speed | Quality | Notes |
-|-------|------|-------|---------|-------|
-| [Qwen3.5-122B-A10B MoE (MXFP4)](https://huggingface.co/unsloth/Qwen3.5-122B-A10B-MXFP4_MOE) | 70GB | ~7 tok/s | Best | 122B params, 10B active. Needs 80GB+ RAM/VRAM |
-| [Qwen3-8B-Q6_K](https://huggingface.co/Qwen/Qwen3-8B-GGUF) | 6.3GB | ~22 tok/s | Good | Best tool-following at small size |
-| [Qwen3-VL-8B + mmproj](https://huggingface.co/Qwen/Qwen3-VL-8B-GGUF) | 7.4GB | ~18 tok/s | Good | Vision model — can see attached images |
+| Model | Files | Size | Notes |
+|-------|-------|------|-------|
+| [Qwen3.5-122B-A10B MoE (MXFP4)](https://huggingface.co/unsloth/Qwen3.5-122B-A10B-GGUF) | `Qwen3.5-122B-A10B-MXFP4_MOE-0000{1,2,3}-of-00003.gguf` | 70GB | 122B params, 10B active. Best quality, ~7 tok/s. Needs 80GB+ |
+| [Qwen3-8B (Q6_K)](https://huggingface.co/Qwen/Qwen3-8B-GGUF) | `Qwen3-8B-Q6_K.gguf` | 6.3GB | Fast (~22 tok/s), great tool-following |
+| [Qwen3-VL-8B Abliterated](https://huggingface.co/mradermacher/Qwen3-VL-8B-Abliterated-Caption-it-GGUF) | `Qwen3-VL-8B-Abliterated-Caption-it.Q6_K.gguf` + `.mmproj-f16.gguf` | 7.4GB | Vision model — can see attached images |
+| [Qwen-Image-2512 (Q4_K_M)](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF) | `qwen-image-2512-Q4_K_M.gguf` | 13GB | Image generation via diffusers (see below) |
 
-Place `.gguf` files in `models/`. Tsunami auto-detects in priority order: 122B MoE > VL-8B > text-8B.
+The 122B MoE also needs `mmproj-BF16.gguf` from the [same repo](https://huggingface.co/unsloth/Qwen3.5-122B-A10B-GGUF) for vision support.
+
+Place files in `models/`. Tsunami auto-detects LLMs in priority order: 122B MoE > VL-8B > text-8B.
 
 ### 3. Install llama.cpp server
 
@@ -117,11 +120,13 @@ build me a landing page      # agent sees tsunami.md, knows the project
 
 ```
 models/
-  Qwen3.5-122B-A10B-MXFP4_MOE-*.gguf             ← 122B MoE (quality, ~7 tok/s)
-  Qwen3-8B-Q6_K.gguf                              ← text model (fast, ~22 tok/s)
-  Qwen3-VL-8B + mmproj                             ← vision model (optional)
-  qwen-image-2512-Q4_K_M.gguf                     ← image gen (13GB, Q4_K_M)
-  Qwen-Image-2512/                                 ← text encoder + VAE (auto-cached)
+  Qwen3.5-122B-A10B-MXFP4_MOE-0000{1,2,3}-of-00003.gguf   ← 122B MoE LLM (70GB, 3 shards)
+  mmproj-122B-BF16.gguf                                      ← 122B vision projector
+  Qwen3-8B-Q6_K.gguf                                        ← 8B text LLM (6.3GB)
+  Qwen3-VL-8B-Abliterated-Caption-it.Q6_K.gguf              ← 8B vision LLM (6.6GB)
+  Qwen3-VL-8B-Abliterated-Caption-it.mmproj-f16.gguf        ← 8B vision projector (0.8GB)
+  qwen-image-2512-Q4_K_M.gguf                               ← image gen transformer (13GB)
+  Qwen-Image-2512/                                           ← text encoder + VAE (16GB, auto-cached)
 ```
 
 Tsunami auto-detects LLM models in priority order: 122B MoE > VL-8B > text-8B. Or point `--endpoint` at any OpenAI-compatible server.
