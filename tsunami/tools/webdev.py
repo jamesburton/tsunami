@@ -89,6 +89,69 @@ export default defineConfig({
             css_file = project_dir / "src" / "index.css"
             css_file.write_text('@import "tailwindcss";\n')
 
+            # Step 4b: Create component directory structure
+            (project_dir / "src" / "components" / "UI").mkdir(parents=True, exist_ok=True)
+            (project_dir / "src" / "sections").mkdir(parents=True, exist_ok=True)
+            (project_dir / "src" / "data").mkdir(parents=True, exist_ok=True)
+
+            # Starter Navbar
+            (project_dir / "src" / "components" / "Navbar.tsx").write_text('''export default function Navbar() {
+  return (
+    <nav className="bg-gray-900 bg-opacity-80 backdrop-blur-sm fixed w-full z-50 py-4">
+      <div className="container mx-auto px-4 flex justify-between items-center">
+        <a href="#" className="text-2xl font-bold text-white">Project</a>
+        <div className="hidden md:flex space-x-6">
+          <a href="#features" className="text-gray-300 hover:text-white transition">Features</a>
+          <a href="#about" className="text-gray-300 hover:text-white transition">About</a>
+        </div>
+      </div>
+    </nav>
+  )
+}
+''')
+            # Starter Footer
+            (project_dir / "src" / "components" / "Footer.tsx").write_text('''export default function Footer() {
+  return (
+    <footer className="bg-gray-950 text-gray-400 py-12 text-center text-sm">
+      <p>&copy; {new Date().getFullYear()} Built with TSUNAMI</p>
+    </footer>
+  )
+}
+''')
+            # Starter Hero
+            (project_dir / "src" / "sections" / "HeroSection.tsx").write_text('''export default function HeroSection() {
+  return (
+    <section className="relative bg-gray-900 text-white py-32 overflow-hidden">
+      <div className="container mx-auto px-4 text-center">
+        <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">Title Here</h1>
+        <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto">Subtitle here.</p>
+        <button className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-8 rounded-full shadow-lg transition duration-300">Get Started</button>
+      </div>
+    </section>
+  )
+}
+''')
+            # Thin App.tsx that imports sections
+            app_file = project_dir / "src" / "App.tsx"
+            app_file.write_text('''import Navbar from './components/Navbar'
+import Footer from './components/Footer'
+import HeroSection from './sections/HeroSection'
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-gray-950 text-white">
+      <Navbar />
+      <HeroSection />
+      <Footer />
+    </div>
+  )
+}
+''')
+            # Clean up default App.css
+            default_css = project_dir / "src" / "App.css"
+            if default_css.exists():
+                default_css.write_text("")
+
             # Step 5: Copy animation assets
             templates_dir = Path("skills/web-builder/templates")
             if templates_dir.exists():
