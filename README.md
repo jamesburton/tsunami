@@ -29,7 +29,7 @@ mkdir -p models
 
 | Model | Files | Size | Port | Notes |
 |-------|-------|------|------|-------|
-| [Qwen3.5-122B-A10B MoE (MXFP4)](https://huggingface.co/unsloth/Qwen3.5-122B-A10B-GGUF) | `Qwen3.5-122B-A10B-MXFP4_MOE-0000{1,2,3}-of-00003.gguf` | 70GB | 8090 | Primary model. 122B params, 10B active. ~7 tok/s |
+| [Qwen3.5-122B-A10B MoE (MXFP4)](https://huggingface.co/unsloth/Qwen3.5-122B-A10B-GGUF) | `Qwen3.5-122B-A10B-MXFP4_MOE-0000{1,2,3}-of-00003.gguf` | 70GB | 8090 | Primary model. 122B params, 10B active. ~20 tok/s |
 | [Qwen3.5-2B (Q4_K_M)](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) | `Qwen3.5-2B-Q4_K_M.gguf` | 1.2GB | 8092 | Fast model. Simple tasks, research, Q&A. ~100 tok/s |
 | [Qwen-Image-2512 (Q4_K_M)](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF) | `qwen-image-2512-Q4_K_M.gguf` | 13GB | 8091 | Image generation via diffusers (see below) |
 
