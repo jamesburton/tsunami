@@ -23,7 +23,11 @@ RAM=$(free -g 2>/dev/null | awk '/^Mem:/{print $2}' || sysctl -n hw.memsize 2>/d
 if command -v nvidia-smi &>/dev/null; then
   GPU="cuda"
   VRAM=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1 | tr -d ' ')
-  echo "  ✓ NVIDIA GPU — ${VRAM}MB VRAM"
+  if [ "$VRAM" = "[N/A]" ] || [ -z "$VRAM" ]; then
+    echo "  ✓ NVIDIA GPU — unified memory (${RAM}GB shared)"
+  else
+    echo "  ✓ NVIDIA GPU — ${VRAM}MB VRAM"
+  fi
 elif [ -d "/opt/rocm" ]; then
   GPU="rocm"
   echo "  ✓ AMD ROCm detected"
@@ -99,8 +103,9 @@ cd "$DIR"
 # --- Python deps ---
 echo "  → Installing Python dependencies..."
 pip3 install -q httpx pyyaml 'duckduckgo-search>=7' 2>/dev/null || \
+pip3 install --break-system-packages -q httpx pyyaml 'duckduckgo-search>=7' 2>/dev/null || \
 pip3 install --user -q httpx pyyaml 'duckduckgo-search>=7' 2>/dev/null || \
-pip install -q httpx pyyaml 'duckduckgo-search>=7'
+echo "  ⚠ pip install failed — try: pip3 install --break-system-packages httpx pyyaml"
 
 # --- Node deps (optional) ---
 if command -v node &>/dev/null && [ -d "$DIR/cli" ]; then
