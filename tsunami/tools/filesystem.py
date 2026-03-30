@@ -80,9 +80,19 @@ class FileRead(BaseTool):
             # Cap output at 8000 chars (~2000 tokens) to prevent context overflow
             max_chars = 8000
             if len(result) > max_chars:
-                result = result[:max_chars] + f"\n... [TRUNCATED — file has {total} lines, showing {max_chars} chars. Use offset/limit to read more.]"
+                # Find how many lines fit in the cap
+                char_count = 0
+                lines_shown = 0
+                for line in numbered:
+                    char_count += len(line) + 1
+                    if char_count > max_chars:
+                        break
+                    lines_shown += 1
+                result = "\n".join(numbered[:lines_shown])
+                next_offset = offset + lines_shown
+                result += f"\n\n[TRUNCATED at line {next_offset} of {total}. Save your notes, then call file_read with offset={next_offset} to continue.]"
 
-            header = f"[{p.name}] Lines {offset+1}-{min(offset+len(selected), total)} of {total}"
+            header = f"[{p.name}] Lines {offset+1}-{min(offset+len(numbered), total)} of {total}"
             return ToolResult(header + "\n" + result)
         except Exception as e:
             return ToolResult(f"Error reading {path}: {e}", is_error=True)
