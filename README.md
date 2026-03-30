@@ -8,61 +8,48 @@ An autonomous AI agent with a CLI + web interface, powered by local models. Plan
 
 ## Quick Start
 
-### 1. Clone and install
+### One-line install
 
 ```bash
-git clone https://github.com/gobbleyourdong/tsunami.git
-cd tsunami
-pip install httpx pyyaml
-cd cli && npm install && cd ..
-```
-
-### 2. Download a model
-
-Drop a GGUF model into `models/`:
-
-```bash
-mkdir -p models
-```
-
-**Recommended models:**
-
-| Model | Files | Size | Port | Notes |
-|-------|-------|------|------|-------|
-| [Qwen3.5-27B (Q8_0)](https://huggingface.co/unsloth/Qwen3.5-27B-GGUF) | `Qwen3.5-27B-Q8_0.gguf` + `mmproj-BF16.gguf` | 27GB + 889MB | 8090 | Primary model. Dense 27B, vision, native function calling |
-| [Qwen3.5-2B (Q4_K_M)](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) | `Qwen3.5-2B-Q4_K_M.gguf` | 1.2GB | 8092 | Fast model. Summarization, data gen. ~100 tok/s |
-| [Qwen-Image-2512 (Q4_K_M)](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF) | `qwen-image-2512-Q4_K_M.gguf` | 13GB | 8091 | Image generation via diffusers (see below) |
-
-Place files in `models/`.
-
-### 3. Install llama.cpp server
-
-Tsunami uses [llama.cpp](https://github.com/ggerganov/llama.cpp) to serve models:
-
-```bash
-git clone https://github.com/ggerganov/llama.cpp
-cd llama.cpp && cmake -B build -DGGML_CUDA=ON && cmake --build build --config Release -j
-```
-
-Update the llama-server path in `tsu` if your binary is in a different location.
-
-### 4. Run
-
-```bash
-./tsu                          # Interactive REPL (Ink CLI)
-./tsu --task "What is 2+2?"   # Single task, exits after
-./tsu --web                    # Web UI on localhost:3000
-```
-
-To use `tsunami` from anywhere:
-
-```bash
-echo 'alias tsunami="'$(pwd)'/tsu"' >> ~/.bashrc
+curl -sSL https://raw.githubusercontent.com/gobbleyourdong/tsunami/main/setup.sh | bash
 source ~/.bashrc
-tsunami                        # works from any directory
+tsunami
 ```
 
-Tsunami auto-starts the model server and the Python backend. Just type `tsunami` and go.
+The installer auto-detects your GPU (CUDA/ROCm/Metal), checks RAM, builds llama.cpp, downloads the 2B model (1.2GB), and creates the `tsunami` command. Takes ~5 minutes on first run.
+
+### Upgrade to 27B (recommended for 32GB+ RAM)
+
+The 2B works out of the box. For better quality, vision, and native function calling, add the 27B:
+
+```bash
+cd ~/tsunami
+huggingface-cli download unsloth/Qwen3.5-27B-GGUF Qwen3.5-27B-Q8_0.gguf --local-dir models
+huggingface-cli download unsloth/Qwen3.5-27B-GGUF mmproj-BF16.gguf --local-dir models
+tsunami   # auto-detects 27B on next start
+```
+
+Drop any GGUF into `models/` — Tsunami auto-detects on startup. Priority: 27B dense > 122B MoE > smaller models.
+
+### Models
+
+| Model | Size | Min RAM | What it does |
+|-------|------|---------|-------------|
+| [Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) (Q4_K_M) | 1.2GB | 4GB | Default. Fast, runs on anything |
+| [Qwen3.5-27B](https://huggingface.co/unsloth/Qwen3.5-27B-GGUF) (Q8_0) + mmproj | 28GB | 32GB | Vision, native function calling, best quality |
+| [Qwen-Image-2512](https://huggingface.co/unsloth/Qwen-Image-2512-GGUF) (Q4_K_M) | 13GB | 48GB | Image generation via diffusers (optional) |
+
+### Manual install
+
+If you prefer manual setup:
+
+```bash
+git clone https://github.com/gobbleyourdong/tsunami.git && cd tsunami
+pip install httpx pyyaml duckduckgo-search
+cd cli && npm install && cd ..
+# Build llama.cpp, download models, then:
+./tsu
+```
 
 ## How It Works
 
