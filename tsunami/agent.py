@@ -24,7 +24,7 @@ from .config import TsunamiConfig
 from .model import LLMModel, ToolCall, create_model
 from .observer import Observer
 from .prompt import build_system_prompt
-from .session import save_session
+from .session import save_session, save_session_summary, load_last_session_summary
 from .state import AgentState
 from .tools import ToolRegistry, build_registry
 from .tools.plan import set_agent_state
@@ -157,6 +157,11 @@ class Agent:
         if self.active_project and self.project_context:
             system_prompt += f"\n\n---\n\n# Active Project: {self.active_project}\n{self.project_context}"
 
+        # Inject previous session context (ECC pattern)
+        prev_session = load_last_session_summary(self.session_dir)
+        if prev_session:
+            system_prompt += f"\n\n---\n\n{prev_session}"
+
         # Inject learned instincts from previous sessions
         instincts = self.observer.format_instincts_for_prompt()
         if instincts:
@@ -218,10 +223,12 @@ class Agent:
             if self.state.task_complete:
                 log.info(f"Task complete after {self.state.iteration} iterations")
                 save_session(self.state, self.session_dir, self.session_id)
+                save_session_summary(self.state, self.session_dir, self.session_id)
                 return result
 
-        # Save on max iterations
+        # Save on max iterations (incomplete task — summary helps resume)
         save_session(self.state, self.session_dir, self.session_id)
+        save_session_summary(self.state, self.session_dir, self.session_id)
         return f"Reached max iterations ({self.config.max_iterations}). Session saved: {self.session_id}"
 
     async def _step(self, _watcher_depth: int = 0) -> str:

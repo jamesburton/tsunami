@@ -76,6 +76,69 @@ def load_session(session_dir: Path, session_id: str = "latest") -> AgentState | 
     return state
 
 
+def save_session_summary(state: AgentState, session_dir: Path, session_id: str = "latest"):
+    """Save a human-readable session summary for injection into next session.
+
+    ECC pattern: structured Markdown with tasks, files modified, tools used.
+    Gets auto-injected at next session start.
+    """
+    session_dir.mkdir(parents=True, exist_ok=True)
+    summary_path = session_dir / "last_session.md"
+
+    # Extract key info from conversation
+    task = ""
+    tools_used = []
+    files_written = []
+    errors = []
+
+    for m in state.conversation:
+        if m.role == "user" and not task:
+            task = m.content[:300]
+        if m.tool_call:
+            tc = m.tool_call.get("function", m.tool_call)
+            name = tc.get("name", "")
+            tools_used.append(name)
+            args = tc.get("arguments", {})
+            if isinstance(args, dict) and name in ("file_write", "file_edit", "file_append"):
+                path = args.get("path", "")
+                if path:
+                    files_written.append(path)
+        if m.role == "tool_result" and "ERROR" in m.content:
+            errors.append(m.content[:150])
+
+    from datetime import datetime
+    now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    complete = "Yes" if state.task_complete else f"No (stopped at iteration {state.iteration})"
+
+    summary = f"""# Previous Session Summary
+**Date:** {now}
+**Task:** {task}
+**Completed:** {complete}
+**Iterations:** {state.iteration}
+**Tools used:** {', '.join(dict.fromkeys(tools_used))}
+"""
+    if files_written:
+        summary += f"**Files modified:** {', '.join(files_written[-15:])}\n"
+    if errors:
+        summary += f"**Errors ({len(errors)}):** {errors[-1]}\n"
+    if state.plan:
+        summary += f"**Plan:** {state.plan.goal}\n"
+
+    summary_path.write_text(summary)
+    return summary_path
+
+
+def load_last_session_summary(session_dir: Path) -> str:
+    """Load the last session summary for injection into system prompt."""
+    summary_path = session_dir / "last_session.md"
+    if summary_path.exists():
+        # Only inject if less than 7 days old
+        age_days = (time.time() - summary_path.stat().st_mtime) / 86400
+        if age_days < 7:
+            return summary_path.read_text()
+    return ""
+
+
 def list_sessions(session_dir: Path) -> list[dict]:
     """List all saved sessions with metadata."""
     sessions = []
