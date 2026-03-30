@@ -14,6 +14,13 @@ case "${1:-}" in
     echo "Tsunami $(git rev-parse --short HEAD) ($(git log -1 --format=%ci | cut -d' ' -f1))"
     exit 0
     ;;
+  swarm)
+    shift
+    TASK="${1:?Usage: tsunami swarm \"task description\" [num_workers]}"
+    WORKERS="${2:-2}"
+    python3 -m tsunami.orchestrate "$TASK" "$WORKERS"
+    exit $?
+    ;;
 esac
 
 # Check model server
