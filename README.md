@@ -72,19 +72,20 @@ The agent loop runs one tool per iteration — sequential reasoning. It analyzes
 
 ## Features
 
-- **20 bootstrap tools** + lazy-loaded toolboxes (browser, webdev, generate, services, parallel, management)
+- **17 bootstrap tools** + lazy-loaded toolboxes (browser, webdev, generate, services, parallel, management)
+- **Native function calling** — Qwen3.5 with `--jinja`, proper `tool_calls` response format
+- **Vision** — agent can see screenshots via mmproj (early-fusion, not a separate VL model)
 - **CodeAct** — persistent Python interpreter (`python_exec`) collapses multi-step operations into one call
-- **Dual-model architecture** — 122B for reasoning/tool calling, 2B for fast summarization via `summarize_file`
-- **Manus-style context management** — file system as unlimited memory, auto-compress on overflow, plan at context tail
-- **React + Tailwind scaffolding** — `webdev_scaffold` creates full Vite projects with TypeScript, pre-flight build checks
-- **Screenshot feedback loop** — Playwright screenshots with DOM error detection (catches Vite/React build errors)
+- **Dual-model architecture** — 27B dense for reasoning/vision, 2B for fast summarization via `summarize_file`
+- **Context management** — file system as unlimited memory, auto-compress on overflow, plan at context tail
+- **React + Tailwind scaffolding** — `webdev_scaffold` creates Vite projects with relaxed TypeScript, pre-flight build checks
+- **Screenshot feedback loop** — Playwright screenshots with DOM error detection (catches build errors)
 - **Image generation** — Qwen-Image-2512 GGUF via diffusers, local inference
-- **LaTeX papers** — writes and compiles arxiv-format research papers via pdflatex
 - **Session persistence** — JSONL save/load with `session_list` and `session_summary` for task resumption
+- **Write sandbox** — file writes blocked outside project dir, cannot modify agent source code
 - **Ink CLI** — React-based terminal UI with spinner, action labels, slash commands
 - **Web UI** — browser-based interface with real-time WebSocket streaming
-- **Projects** — `/project` to list, switch, create projects with persistent `tsunami.md` context
-- **Auto model server** — detects GGUF in `models/`, starts llama-server automatically
+- **Auto model server** — `tsu` detects GGUF in `models/`, starts llama-server with correct flags
 
 ## Slash Commands
 
