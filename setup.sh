@@ -77,9 +77,33 @@ check_dep git "apt install git / brew install git"
 check_dep python3 "apt install python3 / brew install python3"
 check_dep cmake "apt install cmake / brew install cmake"
 
-# Node is optional (only for CLI frontend)
+# Install Node if missing (for Ink CLI)
 if ! command -v node &>/dev/null; then
-  echo "  ⚠ node missing — CLI frontend won't work (agent still works via Python)"
+  echo "  → Installing Node.js..."
+  if [ "$OS" = "Darwin" ]; then
+    # macOS
+    if command -v brew &>/dev/null; then
+      brew install node 2>/dev/null
+    else
+      curl -fsSL https://fnm.vercel.app/install | bash 2>/dev/null
+      export PATH="$HOME/.local/share/fnm:$PATH"
+      eval "$(fnm env)" 2>/dev/null
+      fnm install --lts 2>/dev/null
+    fi
+  else
+    # Linux — use fnm (fast node manager)
+    curl -fsSL https://fnm.vercel.app/install | bash 2>/dev/null
+    export PATH="$HOME/.local/share/fnm:$PATH"
+    eval "$(fnm env)" 2>/dev/null
+    fnm install --lts 2>/dev/null
+  fi
+  if command -v node &>/dev/null; then
+    echo "  ✓ Node.js $(node -v) installed"
+  else
+    echo "  ⚠ Node.js install failed — agent works via Python REPL (install node manually for full CLI)"
+  fi
+else
+  echo "  ✓ node $(node -v)"
 fi
 
 if [ -n "$MISSING" ]; then
