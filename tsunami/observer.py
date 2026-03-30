@@ -210,6 +210,47 @@ Rules:
         except Exception as e:
             log.debug(f"Instinct analysis skipped: {e}")
 
+    def observe_llm_usage(self, prompt_tokens: int, completion_tokens: int,
+                          model: str = "", latency_ms: float = 0):
+        """Track LLM usage metrics per response."""
+        metrics_file = self.obs_dir / "usage.jsonl"
+        try:
+            record = {
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "model": model,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "latency_ms": round(latency_ms),
+                "session": "",
+                "project_id": self.project_id,
+            }
+            with open(metrics_file, "a") as f:
+                f.write(json.dumps(record) + "\n")
+        except Exception:
+            pass
+
+    def get_usage_stats(self) -> dict:
+        """Get aggregate usage stats."""
+        metrics_file = self.obs_dir / "usage.jsonl"
+        if not metrics_file.exists():
+            return {}
+        try:
+            records = [json.loads(l) for l in metrics_file.read_text().strip().split("\n") if l.strip()]
+            total_prompt = sum(r.get("prompt_tokens", 0) for r in records)
+            total_completion = sum(r.get("completion_tokens", 0) for r in records)
+            total_calls = len(records)
+            avg_latency = sum(r.get("latency_ms", 0) for r in records) / max(total_calls, 1)
+            return {
+                "total_calls": total_calls,
+                "total_tokens": total_prompt + total_completion,
+                "prompt_tokens": total_prompt,
+                "completion_tokens": total_completion,
+                "avg_latency_ms": round(avg_latency),
+            }
+        except Exception:
+            return {}
+
     def format_instincts_for_prompt(self, max_tokens: int = 500) -> str:
         """Format top instincts for injection into system prompt."""
         instincts = self.load_instincts()

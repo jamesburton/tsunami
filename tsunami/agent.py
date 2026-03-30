@@ -252,6 +252,17 @@ class Agent:
             tools=self.registry.schemas(),
         )
 
+        # 2b. Track LLM usage
+        if response.raw and "usage" in response.raw:
+            usage = response.raw["usage"]
+            latency = response.raw.get("timings", {}).get("total", 0)
+            self.observer.observe_llm_usage(
+                usage.get("prompt_tokens", 0),
+                usage.get("completion_tokens", 0),
+                response.raw.get("model", ""),
+                latency,
+            )
+
         # 3. Extract the tool call
         tool_call = response.tool_call
 
