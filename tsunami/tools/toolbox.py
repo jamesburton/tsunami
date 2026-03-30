@@ -69,7 +69,15 @@ def _management_tools():
 
 class LoadToolbox(BaseTool):
     name = "load_toolbox"
-    description = "Load additional tools on demand. Call with no args to see available toolboxes. Call with a toolbox name to load it."
+    description = (
+        "Load tools on demand. Available: "
+        "browser (navigate/click/screenshot 13 tools), "
+        "webdev (scaffold/serve/screenshot 4 tools), "
+        "generate (image gen 1 tool), "
+        "services (expose/schedule 3 tools), "
+        "parallel (batch map 1 tool), "
+        "management (subtasks/sessions/shell 7 tools)"
+    )
 
     def parameters_schema(self) -> dict:
         return {
