@@ -89,9 +89,16 @@ class PlanAdvance(BaseTool):
             "required": ["summary"],
         }
 
-    async def execute(self, summary: str, **kw) -> ToolResult:
+    async def execute(self, summary: str = "", **kw) -> ToolResult:
         if _agent_state is None or _agent_state.plan is None:
             return ToolResult("No active plan", is_error=True)
+
+        # ECC pattern: write structured handoff between phases
+        current = _agent_state.plan.phases[_agent_state.plan.current_phase - 1] \
+            if _agent_state.plan.current_phase <= len(_agent_state.plan.phases) else None
+        handoff_note = ""
+        if current and summary:
+            handoff_note = f"\n\nHandoff from Phase {current.id} ({current.title}):\n- Completed: {summary}"
 
         next_phase = _agent_state.plan.advance()
         _agent_state.save_plan(_agent_state.workspace / "plans")
@@ -99,7 +106,8 @@ class PlanAdvance(BaseTool):
         if next_phase:
             return ToolResult(
                 f"Phase complete: {summary}\n"
-                f"Now entering: Phase {next_phase.id} — {next_phase.title}\n\n"
+                f"Now entering: Phase {next_phase.id} — {next_phase.title}"
+                f"{handoff_note}\n\n"
                 f"{_agent_state.plan.summary()}"
             )
         else:
