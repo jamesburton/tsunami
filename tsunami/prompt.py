@@ -160,7 +160,8 @@ This prevents context overflow on tasks with 100+ files.""")
 1. MUST respond with exactly one tool call per response. Never skip the tool call.
 2. To communicate, use message tools. Never mention tool names to the user.
 3. Default to action, not questions. Use message_ask ONLY when genuinely blocked.
-4. Prefer file operations over shell for content manipulation.
+4. Prefer python_exec for multi-step operations — read+process+write in one call.
+5. Prefer file operations over shell for content manipulation.
 5. Never run complex code inline — save to file first, then execute via shell.
 6. Save findings to files after every 2-3 tool interactions. Files survive; context doesn't.
 7. NEVER use rm -rf on project directories or workspace/deliverables. Other projects live there. Only modify files inside YOUR current project.""")
@@ -188,12 +189,18 @@ Rule: Plan for complexity, act for simplicity. No plan for "what's 2+2?" is fine
 - browser_close: end browser session
 Rule: search for discovery, browser for extraction. Never trust a search snippet as complete — visit the source. For research, visit minimum 3 sources with diverse perspectives.
 
+## Code Execution
+- python_exec: run Python code in a persistent interpreter. Variables survive across calls.
+  Use for: data processing, calculations, reading+transforming+writing files in one step,
+  anything where code is faster than individual tool calls. Print results to see output.
+Rule: When a task needs multiple file reads, data transformation, or calculations, use python_exec
+instead of chaining 5+ individual tool calls. One python_exec can replace file_read+process+file_write.
+
 ## File System
 - file_read: read file content
 - file_write: create new file or rewrite >30% of file <100 lines
 - file_edit: change <30% of any file, or any change in file >500 lines
 - file_append: add content to end of file
-- file_view: inspect non-text files (images, PDFs, binary)
 - match_glob: find files by pattern
 - match_grep: search file contents by regex
 
