@@ -78,6 +78,38 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Launch Ink frontend
-cd "$DIR/cli"
-exec npx tsx app.jsx "$@"
+# Launch frontend — Ink CLI if Node available, Python fallback otherwise
+if command -v npx &>/dev/null && [ -d "$DIR/cli/node_modules" ]; then
+  cd "$DIR/cli"
+  exec npx tsx app.jsx "$@"
+else
+  # Python fallback — simple REPL that talks to the agent
+  cd "$DIR"
+  exec python3 -c "
+import sys, asyncio
+sys.path.insert(0, '$DIR')
+from tsunami.agent import Agent
+from tsunami.config import TsunamiConfig
+
+async def main():
+    config = TsunamiConfig.from_yaml('config.yaml')
+    config = TsunamiConfig.from_env(config)
+    agent = Agent(config)
+    print('TSUNAMI — type a task, press Enter. Type exit to quit.')
+    print()
+    while True:
+        try:
+            task = input('> ')
+        except (EOFError, KeyboardInterrupt):
+            break
+        if task.strip().lower() in ('exit', 'quit', 'q'):
+            break
+        if not task.strip():
+            continue
+        result = await agent.run(task)
+        print(result)
+        print()
+
+asyncio.run(main())
+"
+fi
