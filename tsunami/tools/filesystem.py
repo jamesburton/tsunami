@@ -33,7 +33,17 @@ def _resolve_path(path: str, workspace_dir: str) -> Path:
         clean = str(p)
         if clean.startswith(f"./{ws_name}/"):
             p = Path(clean[len(f"./{ws_name}/"):])
-        p = Path(workspace_dir) / p
+        # Try workspace first, fall back to project root
+        ws_path = Path(workspace_dir) / p
+        if ws_path.exists():
+            p = ws_path
+        else:
+            # Try relative to project root (parent of workspace)
+            root_path = Path(workspace_dir).parent / Path(path)
+            if root_path.exists():
+                p = root_path
+            else:
+                p = ws_path  # default to workspace (will error naturally)
     return p.expanduser().resolve()
 
 
