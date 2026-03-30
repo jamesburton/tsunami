@@ -18,11 +18,18 @@ source ~/.bashrc
 tsunami
 ```
 
-The installer auto-detects your GPU (CUDA/ROCm/Metal), checks RAM, builds llama.cpp, downloads the 2B model (1.2GB), and creates the `tsunami` command. Takes ~5 minutes on first run.
+The installer auto-detects your GPU (CUDA/ROCm/Metal), checks RAM, builds llama.cpp, downloads the 2B model + vision (2GB), and creates the `tsunami` command. Takes ~5 minutes on first run.
+
+### Update
+
+```bash
+tsunami update    # pulls latest, keeps your workspace and models
+tsunami version   # check current version
+```
 
 ### Upgrade to 27B (recommended for 32GB+ RAM)
 
-The 2B works out of the box. For better quality, vision, and native function calling, add the 27B:
+The 2B works out of the box — includes vision and function calling. For better quality, add the 27B:
 
 ```bash
 cd ~/tsunami
