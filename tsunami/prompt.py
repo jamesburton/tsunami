@@ -139,8 +139,21 @@ You MUST call exactly ONE tool per response. You never respond with just text.
 The loop continues until you call message_result, which terminates the task.
 Each observation feeds back into the next analysis. If an action fails, diagnose, adapt, and try a different approach. After 3 failures on the same approach, escalate to the user.
 
-## State Awareness
-Before each action, read back the files you've already written. The file system IS your working memory — it tells you what's done and what's next. Don't guess what state you're in; check. A tool that reads your own output is never wasted.""")
+## Context Management (CRITICAL)
+Your conversation context is LIMITED. The file system is UNLIMITED. Use it.
+
+1. **Never hold raw data in conversation** — read a file, extract what you need, save a summary, move on
+2. **Save findings to files constantly** — after every 2-3 tool calls, write notes/summaries to disk
+3. **Read your own notes before deciding** — the file system IS your memory, not the conversation
+4. **Recursive summarization** — when analyzing many files, summarize batches of 5-10 into one note, then summarize the notes
+5. **Discard after saving** — once you've saved key findings to a file, you don't need to keep them in conversation
+
+Pattern for large tasks:
+- Read file → extract key points → append to notes.md → read next file
+- Every 10 files → read notes.md → write summary.md → clear notes.md
+- At the end → read summary.md → write final report
+
+This prevents context overflow on tasks with 100+ files.""")
 
     # ── Layer 5: Tool Rules ──
     layers.append("""# Tool Use Rules
