@@ -455,17 +455,33 @@ class WebdevScreenshot(BaseTool):
 
                 await page.wait_for_timeout(1000)  # Let animations settle
 
+                # Check for Vite/React error overlays before screenshot
+                error_text = await page.evaluate("""() => {
+                    // Vite error overlay
+                    const viteErr = document.querySelector('vite-error-overlay');
+                    if (viteErr) return viteErr.shadowRoot?.querySelector('.message-body')?.textContent || 'Vite error detected';
+                    // React error boundary
+                    const reactErr = document.querySelector('#react-refresh-overlay');
+                    if (reactErr) return reactErr.textContent?.substring(0, 500) || 'React error detected';
+                    // Generic error text on page
+                    const body = document.body?.innerText || '';
+                    if (body.includes('Failed to resolve import') || body.includes('SyntaxError') || body.includes('Module not found'))
+                        return body.substring(0, 500);
+                    return null;
+                }""")
+
                 await page.screenshot(path=str(out), full_page=full_page)
                 await browser.close()
 
             size_kb = out.stat().st_size // 1024
-            return ToolResult(
-                f"Screenshot saved to {out} ({size_kb}KB)\n"
-                f"URL: {url}\n"
-                f"Viewport: {width}x{height}\n"
-                f"Full page: {full_page}\n"
-                f"Review the screenshot to check layout, colors, spacing, and fix any issues."
-            )
+            result_msg = f"Screenshot saved to {out} ({size_kb}KB)\nURL: {url}\nViewport: {width}x{height}\n"
+
+            if error_text:
+                result_msg += f"\n⚠️ BUILD ERROR DETECTED:\n{error_text}\n\nFix the error in the source file and screenshot again."
+            else:
+                result_msg += "No errors detected. Review layout, colors, spacing."
+
+            return ToolResult(result_msg)
 
         except ImportError:
             return ToolResult(
