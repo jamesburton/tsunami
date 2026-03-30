@@ -28,12 +28,7 @@ class PythonExec(BaseTool):
     """Execute Python code in a persistent interpreter."""
 
     name = "python_exec"
-    description = (
-        "Execute Python code in a persistent interpreter. Variables, imports, "
-        "and state survive across calls. Use for data processing, file operations, "
-        "calculations, or any task where writing code is faster than using individual tools. "
-        "Print results to stdout — output is returned."
-    )
+    description = "Run Python code in a persistent interpreter. State survives across calls. print() for output."
 
     def parameters_schema(self) -> dict:
         return {

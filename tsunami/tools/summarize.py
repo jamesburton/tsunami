@@ -22,12 +22,7 @@ class SummarizeFile(BaseTool):
     """Summarize a file using the fast model."""
 
     name = "summarize_file"
-    description = (
-        "Summarize a file using the fast 2B model. Returns a compressed summary "
-        "(~500 tokens) without consuming main model context. Use for large files "
-        "or when you need the gist without reading the full content. "
-        "Much faster and cheaper than file_read for exploration."
-    )
+    description = "Summarize a file via fast 2B model. Saves context. Use before file_read for large files."
 
     def parameters_schema(self) -> dict:
         return {

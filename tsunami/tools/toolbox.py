@@ -63,7 +63,8 @@ def _parallel_tools():
 def _management_tools():
     from .subtask import SubtaskCreate, SubtaskDone
     from .session_tools import SessionList, SessionSummary
-    return [SubtaskCreate, SubtaskDone, SessionList, SessionSummary]
+    from .shell import ShellSend, ShellWait, ShellKill
+    return [SubtaskCreate, SubtaskDone, SessionList, SessionSummary, ShellSend, ShellWait, ShellKill]
 
 
 class LoadToolbox(BaseTool):

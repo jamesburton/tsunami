@@ -50,7 +50,7 @@ def build_registry(config: TsunamiConfig) -> ToolRegistry:
     """
     from .filesystem import FileRead, FileWrite, FileEdit, FileAppend
     from .match import MatchGlob, MatchGrep
-    from .shell import ShellExec, ShellView, ShellSend, ShellWait, ShellKill
+    from .shell import ShellExec, ShellView
     from .message import MessageInfo, MessageAsk, MessageResult
     from .plan import PlanUpdate, PlanAdvance
     from .search import SearchWeb
@@ -60,10 +60,10 @@ def build_registry(config: TsunamiConfig) -> ToolRegistry:
 
     registry = ToolRegistry()
 
-    # Bootstrap — the minimum to operate
+    # Bootstrap — lean core (shell_send/wait/kill available via management toolbox)
     for cls in [FileRead, FileWrite, FileEdit, FileAppend,
                 MatchGlob, MatchGrep,
-                ShellExec, ShellView, ShellSend, ShellWait, ShellKill,
+                ShellExec, ShellView,
                 MessageInfo, MessageAsk, MessageResult,
                 PlanUpdate, PlanAdvance,
                 SearchWeb, PythonExec, SummarizeFile]:
