@@ -510,13 +510,54 @@ class WebdevScreenshot(BaseTool):
             if error_text:
                 result_msg += f"\n⚠️ BUILD ERROR DETECTED:\n{error_text}\n\nFix the error in the source file and screenshot again."
             else:
-                result_msg += "No errors detected. Review layout, colors, spacing."
+                # Vision analysis — send screenshot to model, get text feedback
+                vision_feedback = await self._analyze_screenshot(str(out))
+                if vision_feedback:
+                    result_msg += f"\n📸 VISUAL ANALYSIS:\n{vision_feedback}"
+                else:
+                    result_msg += "No errors detected."
 
             return ToolResult(result_msg)
 
         except ImportError:
             return ToolResult(
                 "Playwright not installed. Run: pip install playwright && python -m playwright install chromium",
+
+    async def _analyze_screenshot(self, image_path: str) -> str:
+        """Send screenshot to vision model for analysis. Returns text only — image stays on disk."""
+        try:
+            import base64
+            import httpx
+
+            with open(image_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode()
+
+            # Try primary model first, fall back to fast model
+            for endpoint in [self.config.model_endpoint, "http://localhost:8092"]:
+                try:
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        resp = await client.post(
+                            f"{endpoint}/v1/chat/completions",
+                            json={
+                                "model": "qwen",
+                                "messages": [{
+                                    "role": "user",
+                                    "content": [
+                                        {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
+                                        {"type": "text", "text": "Analyze this web page screenshot. List any visual issues: broken layout, missing content, color problems, overlapping elements, empty sections, broken images. Be specific and brief. If it looks good, say so."},
+                                    ]
+                                }],
+                                "max_tokens": 300,
+                            },
+                            headers={"Authorization": "Bearer not-needed"},
+                        )
+                        if resp.status_code == 200:
+                            return resp.json()["choices"][0]["message"]["content"]
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return ""
                 is_error=True,
             )
         except Exception as e:
