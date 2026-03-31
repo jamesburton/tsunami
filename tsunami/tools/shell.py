@@ -135,10 +135,13 @@ class ShellExec(BaseTool):
             out = stdout.decode(errors="replace").strip()
             err = stderr.decode(errors="replace").strip()
 
-            # Truncate massive output
+            # Smart output truncation — show what was lost
             max_chars = 10000
             if len(out) > max_chars:
-                out = out[:max_chars] + f"\n... [truncated, {len(out)} total chars]"
+                total_lines = out.count('\n') + 1
+                truncated_part = out[:max_chars]
+                remaining_lines = out[max_chars:].count('\n') + 1
+                out = f"{truncated_part}\n\n... [{remaining_lines} lines truncated, {total_lines} total] ..."
 
             parts = []
             if out:
