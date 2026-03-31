@@ -180,6 +180,13 @@ async def run_bee(
     """
     start = time.time()
 
+    # Guard: empty or whitespace-only tasks fail fast
+    if not task or not task.strip():
+        return BeeResult(
+            task=task or "", success=False, output="",
+            error="Empty task", elapsed_ms=0,
+        )
+
     if not system_prompt:
         system_prompt = (
             "You are a focused worker agent. Complete the task using the tools available. "
