@@ -173,9 +173,9 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
             return "Error: command too long (max 2000 chars)"
         # Bash security — bees get stricter checks than queen
         import re
-        # Block any rm -rf on root or broad paths
-        if re.search(r'\brm\s+(-\w*)?r\w*f?\s+/', cmd):
-            return "BLOCKED: bees cannot run recursive rm on root paths"
+        # Block ALL rm commands — bees are read-only, rm has no legitimate use
+        if re.search(r'\brm\b', cmd):
+            return "BLOCKED: bees cannot delete files"
         # Block network exfiltration tools
         network_cmds = re.compile(r'\b(curl|wget|nc|ncat|netcat|socat|ssh|scp|rsync|ftp|sftp|telnet)\b')
         if network_cmds.search(cmd):
