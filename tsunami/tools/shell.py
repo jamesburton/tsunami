@@ -11,6 +11,11 @@ import re
 
 # Destructive command patterns — block or warn
 _DESTRUCTIVE_PATTERNS = [
+    # Self-preservation — BLOCK commands that destroy the agent itself
+    (re.compile(r'\brm\s+(-\w+\s+)*tsunami\b'),
+     "BLOCKED: cannot delete the tsunami directory"),
+    (re.compile(r'\brm\s+(-\w+\s+)*\.\s*$|\brm\s+(-\w+\s+)*\./'),
+     "BLOCKED: cannot recursively delete current directory"),
     # Workspace protection
     (re.compile(r'rm\s+(-\w*)?r\w*\s+.*deliverables|rm\s+(-\w*)?r\w*\s+.*workspace'),
      "BLOCKED: rm -rf on deliverables/workspace is forbidden"),
@@ -26,6 +31,9 @@ _DESTRUCTIVE_PATTERNS = [
     # Git — safety bypass
     (re.compile(r'\bgit\s+(commit|push|merge)\b[^;&|\n]*--no-verify\b'),
      "WARNING: skipping safety hooks"),
+    # Recursive force delete on root-like paths
+    (re.compile(r'\brm\s+(-\w+\s+)*/\s*$'),
+     "BLOCKED: cannot rm -rf root"),
     # Recursive force delete
     (re.compile(r'(^|[;&|]\s*)rm\s+-[a-zA-Z]*[rR][a-zA-Z]*f'),
      "WARNING: recursive force-remove"),
