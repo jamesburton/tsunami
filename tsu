@@ -63,7 +63,7 @@ if ! check_model; then
       > /tmp/llama-server.log 2>&1 &
     MODEL_PID=$!
   elif [ -n "$TEXT_MODEL" ] && [ -f "$LLAMA" ]; then
-    MMPROJ_SMALL=$(ls models/mmproj-BF16.gguf models/mmproj-F16.gguf 2>/dev/null | head -1)
+    MMPROJ_SMALL=$(ls models/mmproj-2B-BF16.gguf 2>/dev/null | head -1)
     MMPROJ_FLAG=""
     [ -n "$MMPROJ_SMALL" ] && MMPROJ_FLAG="--mmproj $MMPROJ_SMALL"
     echo "  starting $(basename $TEXT_MODEL)${MMPROJ_SMALL:+ + vision}"

@@ -186,6 +186,9 @@ echo "  Downloading default model (1.2GB)..."
 # Default: 2B with vision — runs on anything, ~2GB total
 download "unsloth/Qwen3.5-2B-GGUF" "Qwen3.5-2B-Q4_K_M.gguf"
 download "unsloth/Qwen3.5-2B-GGUF" "mmproj-BF16.gguf"
+# Rename to avoid collision with 27B mmproj
+[ -f "$MODELS_DIR/mmproj-BF16.gguf" ] && [ ! -f "$MODELS_DIR/mmproj-2B-BF16.gguf" ] && \
+  mv "$MODELS_DIR/mmproj-BF16.gguf" "$MODELS_DIR/mmproj-2B-BF16.gguf"
 
 echo ""
 echo "  The 2B model is installed. Upgrade options:"
