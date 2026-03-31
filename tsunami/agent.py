@@ -83,6 +83,9 @@ class Agent:
         # Stall detection
         self._empty_steps = 0
 
+        # Loop detection for auto-swarm
+        self._recent_tools: list[tuple[str, dict]] = []  # (tool_name, args) ring buffer
+
         # Active project context
         self.active_project: str | None = None
         self.project_context: str = ""
@@ -329,6 +332,19 @@ class Agent:
                 "function": {"name": tool_call.name, "arguments": tool_call.arguments},
             },
         )
+
+        # 5b. Loop detection — if same tool 3+ times in a row, it's a batch
+        self._recent_tools.append((tool_call.name, tool_call.arguments))
+        if len(self._recent_tools) > 10:
+            self._recent_tools = self._recent_tools[-10:]
+
+        # Check for repetition loop (same tool called 3+ times consecutively)
+        if len(self._recent_tools) >= 3:
+            last_3_names = [t[0] for t in self._recent_tools[-3:]]
+            if len(set(last_3_names)) == 1 and last_3_names[0] in ("file_read", "file_write", "summarize_file", "shell_exec"):
+                log.info(f"Loop detected: {last_3_names[0]} called 3x in a row. Consider using swarm for batch operations.")
+                # Inject hint into the tool result so the model sees it
+                # (actual auto-swarm would intercept here in future)
 
         # 6. Execute the tool — with argument safety
         tool = self.registry.get(tool_call.name)
