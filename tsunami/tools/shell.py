@@ -7,6 +7,47 @@ Full process lifecycle: exec, view, send, wait, kill.
 """
 
 from __future__ import annotations
+import re
+
+# Destructive command patterns — block or warn
+_DESTRUCTIVE_PATTERNS = [
+    # Workspace protection
+    (re.compile(r'rm\s+(-\w*)?r\w*\s+.*deliverables|rm\s+(-\w*)?r\w*\s+.*workspace'),
+     "BLOCKED: rm -rf on deliverables/workspace is forbidden"),
+    # Git — data loss
+    (re.compile(r'\bgit\s+reset\s+--hard\b'),
+     "WARNING: may discard uncommitted changes"),
+    (re.compile(r'\bgit\s+push\b[^;&|\n]*\s+(--force|-f)\b'),
+     "WARNING: may overwrite remote history"),
+    (re.compile(r'\bgit\s+clean\b[^;&|\n]*-[a-zA-Z]*f'),
+     "WARNING: may permanently delete untracked files"),
+    (re.compile(r'\bgit\s+checkout\s+(--\s+)?\.'),
+     "WARNING: may discard all working tree changes"),
+    # Git — safety bypass
+    (re.compile(r'\bgit\s+(commit|push|merge)\b[^;&|\n]*--no-verify\b'),
+     "WARNING: skipping safety hooks"),
+    # Recursive force delete
+    (re.compile(r'(^|[;&|]\s*)rm\s+-[a-zA-Z]*[rR][a-zA-Z]*f'),
+     "WARNING: recursive force-remove"),
+    # Database
+    (re.compile(r'\b(DROP|TRUNCATE)\s+(TABLE|DATABASE|SCHEMA)\b', re.I),
+     "WARNING: may drop database objects"),
+    (re.compile(r'\bDELETE\s+FROM\s+\w+\s*(;|$)', re.I),
+     "WARNING: may delete all rows"),
+    # Infrastructure
+    (re.compile(r'\bkubectl\s+delete\b'),
+     "WARNING: may delete Kubernetes resources"),
+    (re.compile(r'\bterraform\s+destroy\b'),
+     "WARNING: may destroy infrastructure"),
+]
+
+
+def _check_destructive(command: str) -> str | None:
+    """Check command against destructive patterns. Returns warning or None."""
+    for pattern, warning in _DESTRUCTIVE_PATTERNS:
+        if pattern.search(command):
+            return warning
+    return None
 
 import asyncio
 import logging
@@ -45,10 +86,11 @@ class ShellExec(BaseTool):
         }
 
     async def execute(self, command: str, timeout: int = 3600, workdir: str = "", **kw) -> ToolResult:
-        # Block destructive commands
+        # Destructive command detection
         import re
-        if re.search(r'rm\s+(-\w*)?r\w*\s+.*deliverables|rm\s+(-\w*)?r\w*\s+.*workspace', command):
-            return ToolResult("BLOCKED: rm -rf on deliverables/workspace is forbidden. Other projects live there.", is_error=True)
+        warning = _check_destructive(command)
+        if warning and warning.startswith("BLOCKED"):
+            return ToolResult(warning, is_error=True)
 
         try:
             # Resolve workdir — default to the ark directory
