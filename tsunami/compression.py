@@ -122,11 +122,15 @@ async def compress_context(state: AgentState, model: LLMModel,
                 {
                     "role": "system",
                     "content": (
-                        "You are a conversation compressor. Summarize the following agent "
-                        "conversation history into a concise summary that preserves: "
-                        "(1) key decisions made, (2) important findings/results, "
-                        "(3) errors encountered and how they were resolved, "
-                        "(4) current progress toward the goal. "
+                        "CRITICAL: Respond with TEXT ONLY. Do NOT call any tools.\n\n"
+                        "Summarize this agent conversation into a structured summary:\n\n"
+                        "1. Primary Request: What the user asked for\n"
+                        "2. Key Decisions: Technical choices, architecture decisions\n"
+                        "3. Files Modified: File paths and what changed\n"
+                        "4. Errors and Fixes: What broke and how it was fixed\n"
+                        "5. Current Work: What was being worked on RIGHT BEFORE this summary\n"
+                        "6. Pending Tasks: What still needs to be done\n\n"
+                        "Include file paths, code snippets, and specific details. "
                         "Be factual and specific. Include file paths, URLs, and data points. "
                         "Output only the summary, no preamble."
                     ),
