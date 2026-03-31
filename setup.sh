@@ -42,23 +42,23 @@ fi
 
 echo "  RAM: ${RAM}GB"
 
-# --- Capacity check ---
-MODEL_SIZE="27B"
-if [ "$RAM" -lt 16 ] 2>/dev/null; then
-  echo ""
-  echo "  ⚠ WARNING: ${RAM}GB RAM is below minimum (16GB)"
-  echo "    Tsunami needs at least 16GB for the 2B model"
-  echo "    Recommended: 32GB+ for the 27B model"
-  MODEL_SIZE="2B"
+# --- Capacity check — auto-scale queen + bee slots ---
+if [ "$RAM" -lt 6 ] 2>/dev/null; then
+  MODE="lite"
+  QUEEN="2B"
+  echo "  → ${RAM}GB RAM: lite mode (2B only)"
+elif [ "$RAM" -lt 10 ] 2>/dev/null; then
+  MODE="full"
+  QUEEN="9B"
+  echo "  → ${RAM}GB RAM: full mode (9B queen + bees)"
 elif [ "$RAM" -lt 32 ] 2>/dev/null; then
-  echo "  → ${RAM}GB RAM: will use Q4 quantization (smaller, faster)"
-  MODEL_SIZE="27B-Q4"
-elif [ "$RAM" -lt 64 ] 2>/dev/null; then
-  echo "  → ${RAM}GB RAM: will use Q4 quantization"
-  MODEL_SIZE="27B-Q4"
+  MODE="full"
+  QUEEN="9B"
+  echo "  → ${RAM}GB RAM: full mode (9B queen + bees)"
 else
-  echo "  → ${RAM}GB RAM: will use Q8 quantization (best quality)"
-  MODEL_SIZE="27B-Q8"
+  MODE="full"
+  QUEEN="27B"
+  echo "  → ${RAM}GB RAM: full mode (27B queen + bees)"
 fi
 
 # --- Check dependencies ---
@@ -76,6 +76,7 @@ echo ""
 echo "  Checking dependencies..."
 check_dep git "apt install git / brew install git"
 check_dep python3 "apt install python3 / brew install python3"
+check_dep pip3 "apt install python3-pip / brew install python3"
 check_dep cmake "apt install cmake / brew install cmake"
 
 # Install Node if missing (for Ink CLI)
@@ -155,11 +156,18 @@ if [ ! -f "$LLAMA_BIN" ]; then
     metal) CMAKE_ARGS="$CMAKE_ARGS -DGGML_METAL=ON" ;;
   esac
 
-  cmake "$LLAMA_DIR" -B "$LLAMA_DIR/build" $CMAKE_ARGS 2>/dev/null
+  cmake "$LLAMA_DIR" -B "$LLAMA_DIR/build" $CMAKE_ARGS
   CORES=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
   cmake --build "$LLAMA_DIR/build" --config Release -j"$CORES" \
-    --target llama-server 2>/dev/null
-  echo "  ✓ llama.cpp built"
+    --target llama-server
+  # Verify build succeeded
+  if [ -f "$LLAMA_BIN" ]; then
+    echo "  ✓ llama.cpp built"
+  else
+    echo "  ✗ llama.cpp build FAILED — check cmake output above"
+    echo "    You may need: apt install build-essential cmake"
+    exit 1
+  fi
 else
   echo "  ✓ llama.cpp already built"
 fi
@@ -181,31 +189,32 @@ download() {
 }
 
 echo ""
-echo "  Downloading default model (1.2GB)..."
 
-# Default: 2B with vision — runs on anything, ~2GB total
+# Always download the 2B (bees need it)
+echo "  Downloading bee model (1.2GB)..."
 download "unsloth/Qwen3.5-2B-GGUF" "Qwen3.5-2B-Q4_K_M.gguf"
 download "unsloth/Qwen3.5-2B-GGUF" "mmproj-BF16.gguf"
-# Rename to avoid collision with 27B mmproj
 [ -f "$MODELS_DIR/mmproj-BF16.gguf" ] && [ ! -f "$MODELS_DIR/mmproj-2B-BF16.gguf" ] && \
   mv "$MODELS_DIR/mmproj-BF16.gguf" "$MODELS_DIR/mmproj-2B-BF16.gguf"
 
+# Download queen model based on available memory
+if [ "$QUEEN" = "9B" ]; then
+  echo "  Downloading queen model (5.3GB)..."
+  download "unsloth/Qwen3.5-9B-GGUF" "Qwen3.5-9B-Q4_K_M.gguf"
+  download "unsloth/Qwen3.5-9B-GGUF" "mmproj-BF16.gguf"
+  [ -f "$MODELS_DIR/mmproj-BF16.gguf" ] && [ ! -f "$MODELS_DIR/mmproj-9B-BF16.gguf" ] && \
+    mv "$MODELS_DIR/mmproj-BF16.gguf" "$MODELS_DIR/mmproj-9B-BF16.gguf"
+elif [ "$QUEEN" = "27B" ]; then
+  echo "  Downloading queen model (27GB)..."
+  download "unsloth/Qwen3.5-27B-GGUF" "Qwen3.5-27B-Q8_0.gguf"
+  download "unsloth/Qwen3.5-27B-GGUF" "mmproj-BF16.gguf"
+  [ -f "$MODELS_DIR/mmproj-BF16.gguf" ] && [ ! -f "$MODELS_DIR/mmproj-27B-BF16.gguf" ] && \
+    mv "$MODELS_DIR/mmproj-BF16.gguf" "$MODELS_DIR/mmproj-27B-BF16.gguf"
+fi
+
 echo ""
-echo "  The 2B model is installed. Upgrade options:"
-echo ""
-echo "    # 27B dense with vision (recommended for 32GB+ RAM):"
-echo "    cd $DIR"
-echo "    huggingface-cli download unsloth/Qwen3.5-27B-GGUF Qwen3.5-27B-Q8_0.gguf --local-dir models"
-echo "    huggingface-cli download unsloth/Qwen3.5-27B-GGUF mmproj-BF16.gguf --local-dir models"
-echo ""
-echo "    # Image generation (requires Docker + 48GB+ RAM):"
-echo "    huggingface-cli download unsloth/Qwen-Image-2512-GGUF qwen-image-2512-Q4_K_M.gguf --local-dir models"
-echo "    # Then start diffusion server:"
-echo "    docker run --gpus all -d -v \$(pwd):/ark -p 8091:8091 --name tsunami-diffusion \\"
-echo "      nvcr.io/nvidia/pytorch:25.11-py3 bash -c \\"
-echo "      \"pip install -q 'diffusers>=0.36.0' gguf transformers accelerate && python3 /ark/serve_diffusion.py\""
-echo ""
-echo "    Tsunami auto-detects models on startup — just drop GGUFs in models/."
+echo "  Models installed: $QUEEN queen + 2B bees"
+echo "  Tsunami auto-detects and scales on startup."
 
 # Auto-download image model if Docker available and enough RAM
 if command -v docker &>/dev/null && [ "$RAM" -ge 48 ] 2>/dev/null; then
@@ -258,6 +267,6 @@ echo "  ║  2. tsunami                                ║"
 echo "  ║                                            ║"
 echo "  ║  Or: cd $DIR && ./tsu        ║"
 echo "  ║                                            ║"
-echo "  ║  GPU: $GPU | RAM: ${RAM}GB | Model: $MODEL_SIZE   ║"
+echo "  ║  GPU: $GPU | RAM: ${RAM}GB | Queen: $QUEEN   ║"
 echo "  ╚════════════════════════════════════════════╝"
 echo ""
