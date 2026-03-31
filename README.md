@@ -42,21 +42,28 @@ tsunami   # auto-detects 9B on next start
 
 Drop any GGUF into `models/` — Tsunami auto-detects on startup. Priority: 27B > 9B > 2B.
 
-### Architecture: Wave/Eddy Tide
+### Architecture: When agents spawn, the tide rises.
 
-The 9B wave coordinates, the 2B eddies execute in parallel:
+The **wave** (9B) coordinates. The **eddies** (2B) execute in parallel. Together they form the **tide**.
 
 ```
 User: "analyze all 500 proof files"
-  → Wave (9B): breaks into subtasks, dispatches eddies
-    → Eddy 1 (2B): file_read → reason → done("finding A")
-    → Eddy 2 (2B): file_read → shell_exec → done("finding B")
-    → Eddy 3 (2B): match_grep → done("finding C")
-    → Eddy 4 (2B): file_read → done("finding D")
-  → Wave: synthesizes all results → delivers answer
+  │
+  ▼
+  Wave (9B) — breaks the task, dispatches the tide
+  │
+  ├── Eddy 1 (2B): file_read → reason → done("finding A")
+  ├── Eddy 2 (2B): file_read → shell_exec → done("finding B")
+  ├── Eddy 3 (2B): match_grep → done("finding C")
+  └── Eddy 4 (2B): file_read → done("finding D")
+  │
+  ▼
+  Wave — synthesizes all results → delivers answer
 ```
 
-Eddies have their own agent loops with tools (file_read, shell_exec, match_grep). They run in parallel — stress-tested at 64 concurrent eddies, 5.9 tasks/sec. Each eddy is sandboxed: read-only allowlist, no network, no writes, no system paths (20 rounds of adversarial hardening).
+Each eddy is a full agent loop with tools. They run in parallel — stress-tested at 64 concurrent eddies, 5.9 tasks/sec. Each eddy is sandboxed: read-only command allowlist, no network, no file writes, no system paths. 20 rounds of adversarial hardening, two codebase deletions survived, architecture rewritten from blocklist to allowlist.
+
+Intelligence isn't the model. It's the orchestration.
 
 ### Models
 
