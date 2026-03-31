@@ -415,12 +415,16 @@ class Agent:
             self._recent_tools = self._recent_tools[-10:]
 
         # Check for repetition loop (same tool called 3+ times consecutively)
+        # Auto-swarm: when the queen is doing the same thing 3+ times, hint to use swarm
         if len(self._recent_tools) >= 3:
             last_3_names = [t[0] for t in self._recent_tools[-3:]]
-            if len(set(last_3_names)) == 1 and last_3_names[0] in ("file_read", "file_write", "summarize_file", "shell_exec"):
-                log.info(f"Loop detected: {last_3_names[0]} called 3x in a row. Consider using swarm for batch operations.")
-                # Inject hint into the tool result so the model sees it
-                # (actual auto-swarm would intercept here in future)
+            if len(set(last_3_names)) == 1 and last_3_names[0] in ("file_read", "summarize_file", "match_grep"):
+                log.info(f"Auto-swarm hint: {last_3_names[0]} called 3x in a row")
+                self.state.add_system_note(
+                    f"You're calling {last_3_names[0]} repeatedly. Use the swarm tool to "
+                    f"dispatch multiple bee workers in parallel — it's faster and uses less context. "
+                    f"Give each bee a specific subtask string."
+                )
 
         # 6. Execute the tool — with argument safety
         tool = self.registry.get(tool_call.name)
