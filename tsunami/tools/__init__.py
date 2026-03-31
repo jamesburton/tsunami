@@ -57,6 +57,7 @@ def build_registry(config: TsunamiConfig) -> ToolRegistry:
     from .python_exec import PythonExec
     from .summarize import SummarizeFile
     from .swarm import Swarm
+    from .swarm_analyze import SwarmAnalyze
     from .toolbox import LoadToolbox, set_registry
 
     registry = ToolRegistry()
@@ -67,7 +68,7 @@ def build_registry(config: TsunamiConfig) -> ToolRegistry:
                 ShellExec, ShellView,
                 MessageInfo, MessageAsk, MessageResult,
                 PlanUpdate, PlanAdvance,
-                SearchWeb, PythonExec, SummarizeFile, Swarm]:
+                SearchWeb, PythonExec, SummarizeFile, Swarm, SwarmAnalyze]:
         registry.register(cls(config))
 
     # The one meta-tool — loads everything else from disk

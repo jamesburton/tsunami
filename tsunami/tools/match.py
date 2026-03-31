@@ -44,12 +44,8 @@ class MatchGlob(BaseTool):
             if total > limit:
                 header += f" (showing first {limit})"
 
-            # Auto-swarm: if many files, hint the agent strongly
             if total > 20:
-                header += (
-                    f"\n⚡ AUTO-SWARM RECOMMENDED: {total} files. "
-                    f"Call swarm with batch tasks instead of reading individually."
-                )
+                header += f"\n⚡ {total} files found. Use python_exec to batch-read them or swarm to process in parallel."
 
             return ToolResult(header + "\n" + "\n".join(results))
         except Exception as e:
