@@ -145,7 +145,7 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
                 head = f.read(512)
             if b"\x00" in head:
                 size_kb = p.stat().st_size / 1024
-                return f"Binary file ({size_kb:.0f} KB) — cannot read as text: {path}"
+                return f"BLOCKED: binary file ({size_kb:.0f} KB), cannot read as text: {path}"
         except OSError:
             pass
         # Size gate — skip huge files
