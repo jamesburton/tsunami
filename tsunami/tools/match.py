@@ -43,6 +43,14 @@ class MatchGlob(BaseTool):
             header = f"Found {total} files matching '{pattern}'"
             if total > limit:
                 header += f" (showing first {limit})"
+
+            # Auto-swarm: if many files, hint the agent strongly
+            if total > 20:
+                header += (
+                    f"\n⚡ AUTO-SWARM RECOMMENDED: {total} files. "
+                    f"Call swarm with batch tasks instead of reading individually."
+                )
+
             return ToolResult(header + "\n" + "\n".join(results))
         except Exception as e:
             return ToolResult(f"Error globbing: {e}", is_error=True)
