@@ -120,6 +120,18 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
         p = Path(path) if Path(path).is_absolute() else Path(workdir) / path
         if not p.exists():
             return f"File not found: {path}"
+        # Binary detection — check first 512 bytes for null bytes
+        try:
+            with open(p, "rb") as f:
+                head = f.read(512)
+            if b"\x00" in head:
+                size_kb = p.stat().st_size / 1024
+                return f"Binary file ({size_kb:.0f} KB) — cannot read as text: {path}"
+        except OSError:
+            pass
+        # Size gate — skip huge files
+        if p.stat().st_size > 256 * 1024:
+            return f"File too large ({p.stat().st_size // 1024} KB). Use offset/limit or grep instead."
         text = p.read_text(errors="replace")
         lines = text.splitlines()
         offset = args.get("offset", 0)
@@ -129,12 +141,25 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
 
     elif name == "shell_exec":
         cmd = args.get("command", "")
+        # Bash security — bees get stricter checks than queen
+        import re
+        # Block any rm -rf on root or broad paths
+        if re.search(r'\brm\s+(-\w*)?r\w*f?\s+/', cmd):
+            return "BLOCKED: bees cannot run recursive rm on root paths"
+        from .bash_security import is_command_safe
+        from .tools.shell import _check_destructive
+        destructive = _check_destructive(cmd)
+        if destructive and destructive.startswith("BLOCKED"):
+            return destructive
+        is_safe, warnings = is_command_safe(cmd)
+        if not is_safe:
+            return f"BLOCKED: {'; '.join(warnings)}"
         try:
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE, cwd=workdir,
             )
-            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+            stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=15)
             out = stdout.decode(errors="replace")[:4000]
             if stderr:
                 out += f"\n[stderr] {stderr.decode(errors='replace')[:1000]}"
