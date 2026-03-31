@@ -1,10 +1,10 @@
-"""Auto-scaling bee slots based on available memory.
+"""Auto-scaling eddy slots based on available memory.
 
-Detects available RAM/VRAM, calculates how many bee slots to run,
-leaves a safety gap for the queen and OS. Two modes:
+Detects available RAM/VRAM, calculates how many eddy slots to run,
+leaves a safety gap for the wave and OS. Two modes:
 
-- Full: 9B queen + as many 2B bees as memory allows (up to 32)
-- Lite: 2B only, single model, 2 bee slots (runs on 4GB)
+- Full: 9B wave + as many 2B eddies as memory allows (up to 32)
+- Lite: 2B only, single model, 2 eddy slots (runs on 4GB)
 
 The user never thinks about this. It just works.
 """
@@ -20,9 +20,9 @@ log = logging.getLogger("tsunami.scaling")
 # Memory requirements (approximate, in GB)
 QUEEN_9B_MEM = 5.5   # 9B Q4_K_M + mmproj (tight)
 QUEEN_27B_MEM = 28.0  # 27B Q8_0 + mmproj
-BEE_2B_MEM = 1.5      # 2B Q4_K_M + mmproj
+EDDY_2B_MEM = 1.5      # 2B Q4_K_M + mmproj
 OS_RESERVE = 1.0       # leave for OS
-PER_BEE_SLOT = 0.3     # additional memory per parallel bee slot (KV cache)
+PER_BEE_SLOT = 0.3     # additional memory per parallel eddy slot (KV cache)
 
 MAX_BEES = 32
 MIN_BEES = 1
@@ -79,7 +79,7 @@ def get_available_memory_gb() -> float:
 
 
 def detect_queen_model(models_dir: str) -> str:
-    """Detect which queen model is available."""
+    """Detect which wave model is available."""
     from pathlib import Path
     models = Path(models_dir)
     if (models / "Qwen3.5-27B-Q8_0.gguf").exists():
@@ -104,14 +104,14 @@ def calculate_bee_slots(
     total_mem_gb: float | None = None,
     queen_model: str = "9b",
 ) -> dict:
-    """Calculate optimal bee configuration based on available memory.
+    """Calculate optimal eddy configuration based on available memory.
 
     Returns dict with:
     - mode: "full" or "lite"
     - queen_model: which model to use
-    - bee_slots: number of parallel bee slots
-    - queen_mem: memory reserved for queen
-    - bee_mem: memory reserved for bees
+    - bee_slots: number of parallel eddy slots
+    - queen_mem: memory reserved for wave
+    - bee_mem: memory reserved for eddies
     - total_mem: total detected memory
     """
     if total_mem_gb is None:
@@ -120,24 +120,24 @@ def calculate_bee_slots(
     queen_mem = {
         "27b": QUEEN_27B_MEM,
         "9b": QUEEN_9B_MEM,
-        "2b": BEE_2B_MEM,
+        "2b": EDDY_2B_MEM,
     }.get(queen_model, QUEEN_9B_MEM)
 
-    # Calculate available memory for bees
-    available = total_mem_gb - queen_mem - OS_RESERVE - BEE_2B_MEM  # base bee model
+    # Calculate available memory for eddies
+    available = total_mem_gb - queen_mem - OS_RESERVE - EDDY_2B_MEM  # base eddy model
 
     if available < 0:
-        # Not enough for queen + bees — lite mode
+        # Not enough for wave + eddies — lite mode
         return {
             "mode": "lite",
             "queen_model": "2b",
             "bee_slots": MIN_BEES,
-            "queen_mem": BEE_2B_MEM,
-            "bee_mem": BEE_2B_MEM,
+            "queen_mem": EDDY_2B_MEM,
+            "bee_mem": EDDY_2B_MEM,
             "total_mem": total_mem_gb,
         }
 
-    # Each additional bee slot needs KV cache memory
+    # Each additional eddy slot needs KV cache memory
     bee_slots = int(available / PER_BEE_SLOT)
     bee_slots = max(MIN_BEES, min(bee_slots, MAX_BEES))
 
@@ -146,7 +146,7 @@ def calculate_bee_slots(
         "queen_model": queen_model,
         "bee_slots": bee_slots,
         "queen_mem": queen_mem,
-        "bee_mem": BEE_2B_MEM + bee_slots * PER_BEE_SLOT,
+        "bee_mem": EDDY_2B_MEM + bee_slots * PER_BEE_SLOT,
         "total_mem": total_mem_gb,
     }
 
@@ -155,20 +155,20 @@ def format_scaling_info(config: dict) -> str:
     """Human-readable scaling summary."""
     if config["mode"] == "lite":
         return (
-            f"Lite mode: 2B model only, {config['bee_slots']} bee slot "
+            f"Lite mode: 2B model only, {config['bee_slots']} eddy slot "
             f"({config['total_mem']:.0f}GB detected)"
         )
     return (
-        f"Full mode: {config['queen_model'].upper()} queen + "
-        f"{config['bee_slots']} bee slots "
+        f"Full mode: {config['queen_model'].upper()} wave + "
+        f"{config['bee_slots']} eddy slots "
         f"({config['total_mem']:.0f}GB detected, "
-        f"{config['queen_mem']:.1f}GB queen + {config['bee_mem']:.1f}GB bees)"
+        f"{config['queen_mem']:.1f}GB wave + {config['bee_mem']:.1f}GB eddies)"
     )
 
 
 # Quick reference for README/docs
 SCALING_TABLE = """
-| Memory | Mode | Queen | Bees | Total models |
+| Memory | Mode | Wave | Eddies | Total models |
 |--------|------|-------|------|-------------|
 | 4GB    | Lite | 2B    | 1    | 2B only     |
 | 8GB    | Full | 9B    | 1    | 9B + 2B     |

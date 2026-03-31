@@ -1,16 +1,16 @@
-"""Bee — a lightweight agent worker powered by the 2B model.
+"""Eddy — a lightweight agent worker powered by the 2B model.
 
-A bee is a mini agent loop: it receives a task, has access to tools
+A eddy is a mini agent loop: it receives a task, has access to tools
 (file_read, shell_exec, match_grep, etc.), and runs autonomously
 until it completes or hits a turn limit.
 
-Unlike the queen (27B full agent), bees are:
+Unlike the wave (27B full agent), eddies are:
 - Fast (~100 tok/s on 2B)
 - Cheap (small context, no vision)
 - Disposable (no session persistence)
-- Parallel (multiple bees run simultaneously)
+- Parallel (multiple eddies run simultaneously)
 
-The queen dispatches bees for:
+The wave dispatches eddies for:
 - Reading/analyzing multiple files
 - Running independent shell commands
 - Searching across a codebase
@@ -30,16 +30,16 @@ from pathlib import Path
 
 import httpx
 
-log = logging.getLogger("tsunami.bee")
+log = logging.getLogger("tsunami.eddy")
 
-BEE_ENDPOINT = os.environ.get("TSUNAMI_BEE_ENDPOINT", "http://localhost:8092")
-MAX_TURNS = 10  # safety cap per bee
-BEE_TIMEOUT = 30  # seconds per LLM call
+EDDY_ENDPOINT = os.environ.get("TSUNAMI_BEE_ENDPOINT", "http://localhost:8092")
+MAX_TURNS = 10  # safety cap per eddy
+EDDY_TIMEOUT = 30  # seconds per LLM call
 
 
 @dataclass
 class BeeResult:
-    """Result from a bee's work."""
+    """Result from a eddy's work."""
     task: str
     success: bool
     output: str
@@ -49,8 +49,8 @@ class BeeResult:
     error: str = ""
 
 
-# Tools available to bees (subset of queen's tools)
-BEE_TOOLS = [
+# Tools available to eddies (subset of wave's tools)
+EDDY_TOOLS = [
     {
         "type": "function",
         "function": {
@@ -114,7 +114,7 @@ BEE_TOOLS = [
 
 
 async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
-    """Execute a tool on behalf of a bee. Runs locally (not via LLM)."""
+    """Execute a tool on behalf of a eddy. Runs locally (not via LLM)."""
     if name == "file_read":
         path = args.get("path", "")
         if not path or not isinstance(path, str):
@@ -128,13 +128,13 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
                      'id_rsa', 'id_ed25519', 'id_ecdsa', '.htpasswd', 'shadow',
                      'token', 'token.json', '.git-credentials'}
         if basename in sensitive or basename.startswith('.env'):
-            return f"BLOCKED: bees cannot read sensitive files ({basename})"
+            return f"BLOCKED: eddies cannot read sensitive files ({basename})"
         p = Path(path) if Path(path).is_absolute() else Path(workdir) / path
-        # Sandbox: bees can only read within workdir
+        # Sandbox: eddies can only read within workdir
         try:
             resolved = str(p.resolve())
             if not resolved.startswith(str(Path(workdir).resolve())):
-                return f"BLOCKED: bees can only read files within the project directory"
+                return f"BLOCKED: eddies can only read files within the project directory"
         except (OSError, ValueError):
             return f"Error: invalid path {path}"
         if not p.exists():
@@ -171,7 +171,7 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
             return "Error: command parameter required (string)"
         if len(cmd) > 2000:
             return "Error: command too long (max 2000 chars)"
-        # ALLOWLIST — bees can ONLY run these commands
+        # ALLOWLIST — eddies can ONLY run these commands
         # Round 12 lesson: blocklists fail. A jailbreak ran 'rm -rf tsunami/'
         # and deleted the entire codebase. Allowlist is the only safe model.
         import re, shlex
@@ -195,19 +195,19 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
         # Subshells $() and backticks execute before we can check
         # Tilde ~ expands to home dir, $VAR expands env vars — both bypass path checks
         if re.search(r'\$\(|`|;\s*\w|&&|#', cmd):
-            return "BLOCKED: bees cannot use subshells, command chaining, or comments"
+            return "BLOCKED: eddies cannot use subshells, command chaining, or comments"
         if re.search(r'~[/\s]|~$', cmd):
-            return "BLOCKED: bees cannot use tilde expansion (home directory access)"
+            return "BLOCKED: eddies cannot use tilde expansion (home directory access)"
         if re.search(r'\$[A-Z_]', cmd):
-            return "BLOCKED: bees cannot use environment variables in commands"
+            return "BLOCKED: eddies cannot use environment variables in commands"
         # Block output redirects
         if re.search(r'>\s*[^&]|>>', cmd):
-            return "BLOCKED: bees cannot redirect output to files"
+            return "BLOCKED: eddies cannot redirect output to files"
         # Block absolute paths outside workdir (data leakage prevention)
         # Allow /dev/null only
         abs_paths = re.findall(r'(?<!\w)/(?:etc|proc|home|root|tmp|var|sys|boot|opt|usr|mnt|srv|run)\b', cmd)
         if abs_paths:
-            return f"BLOCKED: bees cannot access system paths ({abs_paths[0]})"
+            return f"BLOCKED: eddies cannot access system paths ({abs_paths[0]})"
         # Extract the first command in each pipeline segment
         segments = re.split(r'\s*\|\s*', cmd)
         for seg in segments:
@@ -216,13 +216,13 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
                 continue
             first_word = re.split(r'\s+', seg)[0]
             if first_word not in ALLOWED_COMMANDS:
-                return f"BLOCKED: '{first_word}' is not in the bee allowlist. Allowed: ls, cat, head, tail, wc, grep, sort, git, etc."
+                return f"BLOCKED: '{first_word}' is not in the eddy allowlist. Allowed: ls, cat, head, tail, wc, grep, sort, git, etc."
             # Git sub-command check
             if first_word == 'git':
                 parts = re.split(r'\s+', seg)
                 sub = parts[1] if len(parts) > 1 else ''
                 if sub and sub not in ALLOWED_GIT:
-                    return f"BLOCKED: 'git {sub}' is not allowed for bees. Allowed: git log/status/diff/show/branch/blame"
+                    return f"BLOCKED: 'git {sub}' is not allowed for eddies. Allowed: git log/status/diff/show/branch/blame"
         try:
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE,
@@ -250,7 +250,7 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
         # Sandbox: grep restricted to workdir
         try:
             if not str(Path(directory).resolve()).startswith(str(Path(workdir).resolve())):
-                return "BLOCKED: bees can only search within the project directory"
+                return "BLOCKED: eddies can only search within the project directory"
         except (OSError, ValueError):
             return "Error: invalid directory"
         try:
@@ -276,13 +276,13 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
 async def run_bee(
     task: str,
     workdir: str = ".",
-    endpoint: str = BEE_ENDPOINT,
+    endpoint: str = EDDY_ENDPOINT,
     max_turns: int = MAX_TURNS,
     system_prompt: str = "",
 ) -> BeeResult:
-    """Run a single bee agent loop.
+    """Run a single eddy agent loop.
 
-    The bee gets a task, can use tools, and runs until it calls
+    The eddy gets a task, can use tools, and runs until it calls
     'done' or hits the turn limit.
     """
     start = time.time()
@@ -314,7 +314,7 @@ async def run_bee(
     tool_calls = 0
     turns = 0
 
-    async with httpx.AsyncClient(timeout=BEE_TIMEOUT) as client:
+    async with httpx.AsyncClient(timeout=EDDY_TIMEOUT) as client:
         for turn in range(max_turns):
             turns = turn + 1
 
@@ -324,7 +324,7 @@ async def run_bee(
                     json={
                         "model": "qwen",
                         "messages": messages,
-                        "tools": BEE_TOOLS,
+                        "tools": EDDY_TOOLS,
                         "tool_choice": "auto",
                         "max_tokens": 1024,
                         "temperature": 0.3,
@@ -416,12 +416,12 @@ async def run_swarm(
     tasks: list[str],
     workdir: str = ".",
     max_concurrent: int = 4,
-    endpoint: str = BEE_ENDPOINT,
+    endpoint: str = EDDY_ENDPOINT,
     system_prompt: str = "",
 ) -> list[BeeResult]:
-    """Run multiple bees in parallel with concurrency control.
+    """Run multiple eddies in parallel with concurrency control.
 
-    The queen calls this to dispatch work to the hive.
+    The wave calls this to dispatch work to the hive.
     """
     sem = asyncio.Semaphore(max_concurrent)
     start = time.time()
@@ -444,7 +444,7 @@ async def run_swarm(
 
 
 def _sanitize_bee_output(text: str) -> str:
-    """Sanitize bee output before sending to queen.
+    """Sanitize eddy output before sending to wave.
 
     Prevents: tool call injection, control chars, excessive size.
     """
@@ -452,18 +452,18 @@ def _sanitize_bee_output(text: str) -> str:
     # Strip control characters (null, ANSI escapes, etc.)
     text = _re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
     text = _re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
-    # Defang JSON that looks like tool calls (prevent queen misparse)
+    # Defang JSON that looks like tool calls (prevent wave misparse)
     text = text.replace('"name":', '"_name":')
     text = text.replace('"arguments":', '"_arguments":')
     return text
 
 
 def format_swarm_results(results: list[BeeResult]) -> str:
-    """Format swarm results for the queen to consume."""
-    lines = [f"swarm: {len(results)} bees dispatched"]
+    """Format swarm results for the wave to consume."""
+    lines = [f"swarm: {len(results)} eddies dispatched"]
     for i, r in enumerate(results):
         status = "ok" if r.success else "FAIL"
-        lines.append(f"\n[bee {i}] {status} ({r.turns} turns, {r.tool_calls} tools, {r.elapsed_ms:.0f}ms)")
+        lines.append(f"\n[eddy {i}] {status} ({r.turns} turns, {r.tool_calls} tools, {r.elapsed_ms:.0f}ms)")
         if r.output:
             lines.append(_sanitize_bee_output(r.output[:500]))
         if r.error:

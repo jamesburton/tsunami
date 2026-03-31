@@ -1,10 +1,10 @@
-"""Swarm tool — queen dispatches tool-wielding bee workers.
+"""Swarm tool — wave dispatches tool-wielding eddy workers.
 
-The queen (27B) breaks a task into subtasks and sends each to a
-bee (2B) that has its own agent loop with file_read, shell_exec,
+The wave (27B) breaks a task into subtasks and sends each to a
+eddy (2B) that has its own agent loop with file_read, shell_exec,
 match_grep, and a 'done' tool to report results.
 
-Bees run in parallel. Results merge back to the queen.
+Eddies run in parallel. Results merge back to the wave.
 """
 
 from __future__ import annotations
@@ -21,13 +21,13 @@ MAX_WORKERS = int(os.environ.get("TSUNAMI_MAX_WORKERS", "4"))
 
 
 class Swarm(BaseTool):
-    """Dispatch parallel bee workers for batch tasks."""
+    """Dispatch parallel eddy workers for batch tasks."""
 
     name = "swarm"
     description = (
-        f"Dispatch up to {MAX_WORKERS} parallel bee workers for batch tasks. "
-        "Each bee has its own agent loop with tools (file_read, shell_exec, match_grep). "
-        "Give each bee a specific subtask. Bees run simultaneously and report back. "
+        f"Dispatch up to {MAX_WORKERS} parallel eddy workers for batch tasks. "
+        "Each eddy has its own agent loop with tools (file_read, shell_exec, match_grep). "
+        "Give each eddy a specific subtask. Eddies run simultaneously and report back. "
         "Use for: reading many files, parallel searches, batch processing."
     )
 
@@ -38,11 +38,11 @@ class Swarm(BaseTool):
                 "tasks": {
                     "type": "array",
                     "items": {"type": "string"},
-                    "description": f"List of subtask prompts (max {MAX_WORKERS}). Each runs on a bee worker.",
+                    "description": f"List of subtask prompts (max {MAX_WORKERS}). Each runs on a eddy worker.",
                 },
                 "system_prompt": {
                     "type": "string",
-                    "description": "Optional system prompt for all bees (default: focused worker)",
+                    "description": "Optional system prompt for all eddies (default: focused worker)",
                     "default": "",
                 },
             },
@@ -54,11 +54,11 @@ class Swarm(BaseTool):
             return ToolResult("tasks list required", is_error=True)
 
         tasks = tasks[:MAX_WORKERS]
-        log.info(f"Swarming {len(tasks)} bees")
+        log.info(f"Swarming {len(tasks)} eddies")
 
-        from ..bee import run_swarm, format_swarm_results
+        from ..eddy import run_swarm, format_swarm_results
 
-        # Use the ark project root as workdir so bees can access files
+        # Use the ark project root as workdir so eddies can access files
         workdir = str(self.config.workspace_dir)
         # Go up one level to project root (workspace is inside ark)
         import os.path

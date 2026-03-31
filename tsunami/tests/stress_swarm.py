@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Stress test the bee swarm — hammer the 2B until it breaks.
+"""Stress test the eddy swarm — hammer the 2B until it breaks.
 
 Runs against live 2B server on :8092. Tests:
-1. Single bee with tool use
-2. 4 parallel bees (fills all slots)
-3. 8 parallel bees (oversubscribed — tests queuing)
-4. 16 parallel bees (extreme — should degrade gracefully)
-5. Bee with bad task (error handling)
-6. Bee with huge output (context pressure)
+1. Single eddy with tool use
+2. 4 parallel eddies (fills all slots)
+3. 8 parallel eddies (oversubscribed — tests queuing)
+4. 16 parallel eddies (extreme — should degrade gracefully)
+5. Eddy with bad task (error handling)
+6. Eddy with huge output (context pressure)
 7. Rapid fire — 20 quick tasks back-to-back
 8. Mixed workloads — reads + shell + grep simultaneously
 
@@ -23,9 +23,9 @@ import time
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from tsunami.bee import run_bee, run_swarm, format_swarm_results, BeeResult
+from tsunami.eddy import run_bee, run_swarm, format_swarm_results, BeeResult
 
-BEE_ENDPOINT = "http://localhost:8092"
+EDDY_ENDPOINT = "http://localhost:8092"
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
@@ -47,21 +47,21 @@ def result_line(name, result, elapsed=None):
 
 
 async def test_single_bee():
-    """Single bee with tool use — baseline."""
-    header("TEST 1: Single bee with tool use")
+    """Single eddy with tool use — baseline."""
+    header("TEST 1: Single eddy with tool use")
     start = time.time()
     r = await run_bee(
         "Read the file tsunami/config.py and tell me how many dataclass fields it has.",
         workdir=PROJECT_ROOT,
-        endpoint=BEE_ENDPOINT,
+        endpoint=EDDY_ENDPOINT,
     )
-    result_line("single bee + file_read", r, time.time() - start)
+    result_line("single eddy + file_read", r, time.time() - start)
     return r.success
 
 
 async def test_4_parallel():
-    """4 bees = exact slot count."""
-    header("TEST 2: 4 parallel bees (filling all slots)")
+    """4 eddies = exact slot count."""
+    header("TEST 2: 4 parallel eddies (filling all slots)")
     tasks = [
         "Run 'ls tsunami/*.py | wc -l' and tell me the count.",
         "Read tsunami/__init__.py and tell me what it says.",
@@ -69,21 +69,21 @@ async def test_4_parallel():
         "Search for 'class.*BaseTool' in tsunami/tools/ and tell me how many matches.",
     ]
     start = time.time()
-    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=BEE_ENDPOINT)
+    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=EDDY_ENDPOINT)
     elapsed = time.time() - start
     for i, r in enumerate(results):
-        result_line(f"bee {i}", r)
+        result_line(f"eddy {i}", r)
     succeeded = sum(1 for r in results if r.success)
     print(f"\n  {succeeded}/{len(results)} succeeded in {elapsed:.1f}s")
     return succeeded == len(results)
 
 
 async def test_8_oversubscribed():
-    """8 bees on 4 slots — tests queuing."""
-    header("TEST 3: 8 parallel bees (oversubscribed)")
+    """8 eddies on 4 slots — tests queuing."""
+    header("TEST 3: 8 parallel eddies (oversubscribed)")
     tasks = [f"What is {i} * {i+3}? Just the number." for i in range(8)]
     start = time.time()
-    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=8, endpoint=BEE_ENDPOINT)
+    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=8, endpoint=EDDY_ENDPOINT)
     elapsed = time.time() - start
     succeeded = sum(1 for r in results if r.success)
     errors = [r for r in results if not r.success]
@@ -94,11 +94,11 @@ async def test_8_oversubscribed():
 
 
 async def test_16_extreme():
-    """16 bees — extreme oversubscription."""
-    header("TEST 4: 16 parallel bees (extreme)")
-    tasks = [f"Say the word 'bee{i}' and nothing else." for i in range(16)]
+    """16 eddies — extreme oversubscription."""
+    header("TEST 4: 16 parallel eddies (extreme)")
+    tasks = [f"Say the word 'eddy{i}' and nothing else." for i in range(16)]
     start = time.time()
-    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=16, endpoint=BEE_ENDPOINT)
+    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=16, endpoint=EDDY_ENDPOINT)
     elapsed = time.time() - start
     succeeded = sum(1 for r in results if r.success)
     print(f"  {succeeded}/{len(results)} succeeded in {elapsed:.1f}s")
@@ -106,12 +106,12 @@ async def test_16_extreme():
 
 
 async def test_error_handling():
-    """Bee with impossible task — should fail gracefully."""
+    """Eddy with impossible task — should fail gracefully."""
     header("TEST 5: Error handling")
     r = await run_bee(
         "Read the file /nonexistent/impossible/path.txt and summarize it.",
         workdir=PROJECT_ROOT,
-        endpoint=BEE_ENDPOINT,
+        endpoint=EDDY_ENDPOINT,
     )
     result_line("impossible task", r)
     # Should complete (success or failure) without crashing
@@ -119,12 +119,12 @@ async def test_error_handling():
 
 
 async def test_context_pressure():
-    """Bee reading a large file — context pressure."""
+    """Eddy reading a large file — context pressure."""
     header("TEST 6: Context pressure (large file)")
     r = await run_bee(
         "Read tsunami/prompt.py and count how many times the word 'tool' appears.",
         workdir=PROJECT_ROOT,
-        endpoint=BEE_ENDPOINT,
+        endpoint=EDDY_ENDPOINT,
         max_turns=5,
     )
     result_line("large file read", r)
@@ -136,7 +136,7 @@ async def test_rapid_fire():
     header("TEST 7: Rapid fire (20 tasks)")
     tasks = [f"What is {i} + {i}? Just the number." for i in range(20)]
     start = time.time()
-    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=BEE_ENDPOINT)
+    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=EDDY_ENDPOINT)
     elapsed = time.time() - start
     succeeded = sum(1 for r in results if r.success)
     total_tools = sum(r.tool_calls for r in results)
@@ -150,13 +150,13 @@ async def test_mixed_workload():
     """Different tool types simultaneously."""
     header("TEST 8: Mixed workload")
     tasks = [
-        "Read tsunami/bee.py and count the number of functions defined (def keyword).",
+        "Read tsunami/eddy.py and count the number of functions defined (def keyword).",
         "Run 'find tsunami/ -name \"*.py\" | wc -l' and report the count.",
         "Search for 'async def' in tsunami/ and count matches.",
         "Read tsunami/config.py and list all the field names.",
     ]
     start = time.time()
-    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=BEE_ENDPOINT)
+    results = await run_swarm(tasks, workdir=PROJECT_ROOT, max_concurrent=4, endpoint=EDDY_ENDPOINT)
     elapsed = time.time() - start
     for i, r in enumerate(results):
         result_line(f"mixed {i}", r)
@@ -167,7 +167,7 @@ async def test_mixed_workload():
 
 async def main():
     print("\n  TSUNAMI SWARM STRESS TEST")
-    print(f"  Target: {BEE_ENDPOINT} (2B, 4 slots)")
+    print(f"  Target: {EDDY_ENDPOINT} (2B, 4 slots)")
     print(f"  Workdir: {PROJECT_ROOT}")
 
     tests = [

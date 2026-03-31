@@ -1,6 +1,6 @@
-"""Swarm analyze — batch-analyze files via parallel bee workers.
+"""Swarm analyze — batch-analyze files via parallel eddy workers.
 
-When given a directory of files and a question, dispatches bee workers
+When given a directory of files and a question, dispatches eddy workers
 that can actually READ the files (via their own file_read tool) and
 reason about the contents. Results are synthesized into a summary.
 """
@@ -20,12 +20,12 @@ MAX_WORKERS = int(os.environ.get("TSUNAMI_MAX_WORKERS", "16"))
 
 
 class SwarmAnalyze(BaseTool):
-    """Read many files in parallel via bee workers and extract patterns."""
+    """Read many files in parallel via eddy workers and extract patterns."""
 
     name = "swarm_analyze"
     description = (
-        "Analyze ALL files in a directory using parallel bee workers. "
-        "Each bee reads its assigned file(s) and answers the question. "
+        "Analyze ALL files in a directory using parallel eddy workers. "
+        "Each eddy reads its assigned file(s) and answers the question. "
         "Results are synthesized. Use for analyzing 20+ files."
     )
 
@@ -60,13 +60,13 @@ class SwarmAnalyze(BaseTool):
         if not files:
             return ToolResult(f"No {pattern} files in {directory}", is_error=True)
 
-        log.info(f"Swarm analyzing {len(files)} files with up to {MAX_WORKERS} bees")
+        log.info(f"Swarm analyzing {len(files)} files with up to {MAX_WORKERS} eddies")
 
-        from ..bee import run_swarm, format_swarm_results
+        from ..eddy import run_swarm, format_swarm_results
 
         # Build a task per file (or batch files for fewer workers)
         if len(files) <= MAX_WORKERS:
-            # One file per bee
+            # One file per eddy
             tasks = [
                 f"Read the file '{f}' and answer: {question}. Be concise — one paragraph max."
                 for f in files
@@ -104,7 +104,7 @@ class SwarmAnalyze(BaseTool):
         succeeded = sum(1 for r in results if r.success)
         total_tools = sum(r.tool_calls for r in results)
 
-        summary = f"Analyzed {len(files)} files via {len(tasks)} bees ({succeeded} succeeded, {total_tools} tool calls).\n"
+        summary = f"Analyzed {len(files)} files via {len(tasks)} eddies ({succeeded} succeeded, {total_tools} tool calls).\n"
         summary += f"Results saved to {output_path}\n\n"
 
         # Include top findings in context

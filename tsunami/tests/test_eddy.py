@@ -1,14 +1,14 @@
-"""Tests for bee worker agent — tool execution and result formatting."""
+"""Tests for eddy worker agent — tool execution and result formatting."""
 
 import asyncio
 import os
 import tempfile
 import pytest
 
-from tsunami.bee import (
+from tsunami.eddy import (
     _execute_bee_tool,
     BeeResult,
-    BEE_TOOLS,
+    EDDY_TOOLS,
     format_swarm_results,
 )
 
@@ -18,7 +18,7 @@ def run(coro):
 
 
 class TestBeeToolExecution:
-    """Bees can execute tools locally."""
+    """Eddies can execute tools locally."""
 
     def setup_method(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -77,20 +77,20 @@ class TestBeeTools:
     """Tool definitions are well-formed."""
 
     def test_all_tools_have_names(self):
-        for tool in BEE_TOOLS:
+        for tool in EDDY_TOOLS:
             assert "function" in tool
             assert "name" in tool["function"]
 
     def test_done_tool_exists(self):
-        names = [t["function"]["name"] for t in BEE_TOOLS]
+        names = [t["function"]["name"] for t in EDDY_TOOLS]
         assert "done" in names
 
     def test_file_read_exists(self):
-        names = [t["function"]["name"] for t in BEE_TOOLS]
+        names = [t["function"]["name"] for t in EDDY_TOOLS]
         assert "file_read" in names
 
     def test_shell_exec_exists(self):
-        names = [t["function"]["name"] for t in BEE_TOOLS]
+        names = [t["function"]["name"] for t in EDDY_TOOLS]
         assert "shell_exec" in names
 
 
@@ -109,7 +109,7 @@ class TestBeeResult:
 
 
 class TestFormatSwarmResults:
-    """Formatting for queen consumption."""
+    """Formatting for wave consumption."""
 
     def test_format_success(self):
         results = [
@@ -117,7 +117,7 @@ class TestFormatSwarmResults:
             BeeResult(task="count lines", success=True, output="42 lines", tool_calls=1, turns=2, elapsed_ms=300),
         ]
         formatted = format_swarm_results(results)
-        assert "2 bees" in formatted
+        assert "2 eddies" in formatted
         assert "found 10 functions" in formatted
         assert "42 lines" in formatted
         assert "ok" in formatted
@@ -134,7 +134,7 @@ class TestFormatSwarmResults:
 
     def test_format_empty(self):
         formatted = format_swarm_results([])
-        assert "0 bees" in formatted
+        assert "0 eddies" in formatted
 
     def test_truncates_long_output(self):
         results = [

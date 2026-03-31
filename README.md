@@ -27,13 +27,13 @@ tsunami update    # pulls latest, keeps your workspace and models
 tsunami version   # check current version
 ```
 
-### Upgrade to 9B queen (recommended for 12GB+ VRAM)
+### Upgrade to 9B wave (recommended for 12GB+ VRAM)
 
-The 2B works out of the box. For the full queen/bee architecture with vision and image generation:
+The 2B works out of the box. For the full wave/eddy architecture with vision and image generation:
 
 ```bash
 cd ~/tsunami
-# 9B queen — reasoning, planning, tool dispatch
+# 9B wave — reasoning, planning, tool dispatch
 huggingface-cli download unsloth/Qwen3.5-9B-GGUF Qwen3.5-9B-Q4_K_M.gguf --local-dir models
 huggingface-cli download unsloth/Qwen3.5-9B-GGUF mmproj-BF16.gguf --local-dir models
 mv models/mmproj-BF16.gguf models/mmproj-9B-BF16.gguf
@@ -42,28 +42,28 @@ tsunami   # auto-detects 9B on next start
 
 Drop any GGUF into `models/` — Tsunami auto-detects on startup. Priority: 27B > 9B > 2B.
 
-### Architecture: Queen/Bee Swarm
+### Architecture: Wave/Eddy Swarm
 
-The 9B queen coordinates, the 2B bees execute in parallel:
+The 9B wave coordinates, the 2B eddies execute in parallel:
 
 ```
 User: "analyze all 500 proof files"
-  → Queen (9B): breaks into subtasks, dispatches bees
-    → Bee 1 (2B): file_read → reason → done("finding A")
-    → Bee 2 (2B): file_read → shell_exec → done("finding B")
-    → Bee 3 (2B): match_grep → done("finding C")
-    → Bee 4 (2B): file_read → done("finding D")
-  → Queen: synthesizes all results → delivers answer
+  → Wave (9B): breaks into subtasks, dispatches eddies
+    → Eddy 1 (2B): file_read → reason → done("finding A")
+    → Eddy 2 (2B): file_read → shell_exec → done("finding B")
+    → Eddy 3 (2B): match_grep → done("finding C")
+    → Eddy 4 (2B): file_read → done("finding D")
+  → Wave: synthesizes all results → delivers answer
 ```
 
-Bees have their own agent loops with tools (file_read, shell_exec, match_grep). They run in parallel — stress-tested at 64 concurrent bees, 5.9 tasks/sec. Each bee is sandboxed: read-only allowlist, no network, no writes, no system paths (20 rounds of adversarial hardening).
+Eddies have their own agent loops with tools (file_read, shell_exec, match_grep). They run in parallel — stress-tested at 64 concurrent eddies, 5.9 tasks/sec. Each eddy is sandboxed: read-only allowlist, no network, no writes, no system paths (20 rounds of adversarial hardening).
 
 ### Models
 
 | Component | Model | Size | What it does |
 |-----------|-------|------|-------------|
-| Queen | [Qwen3.5-9B](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF) (Q4_K_M) + mmproj | 6.2GB | Reasoning, vision, tool dispatch |
-| Bees | [Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) (Q4_K_M) + mmproj | 1.8GB | Parallel workers with tool access |
+| Wave | [Qwen3.5-9B](https://huggingface.co/unsloth/Qwen3.5-9B-GGUF) (Q4_K_M) + mmproj | 6.2GB | Reasoning, vision, tool dispatch |
+| Eddies | [Qwen3.5-2B](https://huggingface.co/unsloth/Qwen3.5-2B-GGUF) (Q4_K_M) + mmproj | 1.8GB | Parallel workers with tool access |
 | Image gen | [SD-Turbo](https://huggingface.co/stabilityai/sd-turbo) (fp16) | 2.0GB | Sub-second image generation |
 | **Total** | | **10GB** | **Full stack on a 12GB GPU** |
 
@@ -71,17 +71,17 @@ Bees have their own agent loops with tools (file_read, shell_exec, match_grep). 
 
 Tsunami detects your memory and auto-configures. You never think about this.
 
-| Memory | Mode | Queen | Bee slots | What you get |
+| Memory | Mode | Wave | Eddy slots | What you get |
 |--------|------|-------|-----------|-------------|
 | 4GB | Lite | 2B | 1 | Basic agent, runs on anything |
-| 8GB | Full | 9B | 1 | Queen + 1 bee with vision |
+| 8GB | Full | 9B | 1 | Wave + 1 eddy with vision |
 | 12GB | Full | 9B | 4 | Good for most tasks |
 | 16GB | Full | 9B | 8 | Fast parallel work |
 | 24GB | Full | 9B | 16 | Heavy swarm operations |
 | 32GB+ | Full | 27B | 4+ | Best reasoning + swarm |
 | 64GB+ | Full | 27B | 32 | Maximum configuration |
 
-For 32GB+ systems, swap in the 27B queen:
+For 32GB+ systems, swap in the 27B wave:
 
 ```bash
 huggingface-cli download unsloth/Qwen3.5-27B-GGUF Qwen3.5-27B-Q8_0.gguf --local-dir models
@@ -115,7 +115,7 @@ The agent loop runs one tool per iteration — sequential reasoning. It analyzes
 - **Native function calling** — Qwen3.5 with `--jinja`, proper `tool_calls` response format
 - **Vision** — agent sees screenshots via mmproj (early-fusion, not a separate VL model)
 - **CodeAct** — persistent Python interpreter collapses multi-step operations into one call
-- **Dual-model architecture** — 27B queen for reasoning, 2B bees for parallel worker tasks
+- **Dual-model architecture** — 27B wave for reasoning, 2B eddies for parallel worker tasks
 - **Parallel tool execution** — concurrent-safe tools run simultaneously, unsafe serialize automatically
 - **Model fallback** — automatic switch to backup model after consecutive overload errors
 
@@ -194,10 +194,10 @@ build me a landing page      # agent sees tsunami.md, knows the project
 
 ```
 models/
-  Qwen3.5-9B-Q4_K_M.gguf          ← queen (5.3GB, reasoning + vision + tool dispatch)
-  mmproj-9B-BF16.gguf              ← queen vision projector (880MB)
-  Qwen3.5-2B-Q4_K_M.gguf          ← bees (1.2GB, parallel workers)
-  mmproj-2B-BF16.gguf              ← bee vision projector (641MB)
+  Qwen3.5-9B-Q4_K_M.gguf          ← wave (5.3GB, reasoning + vision + tool dispatch)
+  mmproj-9B-BF16.gguf              ← wave vision projector (880MB)
+  Qwen3.5-2B-Q4_K_M.gguf          ← eddies (1.2GB, parallel workers)
+  mmproj-2B-BF16.gguf              ← eddy vision projector (641MB)
 ```
 
 SD-Turbo downloads automatically on first image generation (~2GB, cached by HuggingFace).

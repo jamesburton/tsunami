@@ -30,10 +30,10 @@ def _server_up(port: int) -> bool:
         return False
 
 QUEEN_UP = _server_up(8090)
-BEE_UP = _server_up(8092)
+EDDY_UP = _server_up(8092)
 
 skip_no_queen = pytest.mark.skipif(not QUEEN_UP, reason="27B server not running on :8090")
-skip_no_bee = pytest.mark.skipif(not BEE_UP, reason="2B server not running on :8092")
+skip_no_bee = pytest.mark.skipif(not EDDY_UP, reason="2B server not running on :8092")
 
 
 def _make_agent(workspace_dir: str):
@@ -181,12 +181,12 @@ class TestE2ESafetyFeatures:
 class TestE2EBeeModel:
     """2B model server responds correctly."""
 
-    def test_bee_health(self):
+    def test_eddy_health(self):
         """2B server is healthy and responding."""
         r = httpx.get("http://localhost:8092/health", timeout=5)
         assert r.status_code == 200
 
-    def test_bee_simple_completion(self):
+    def test_eddy_simple_completion(self):
         """2B model can generate a basic response."""
         async def _test():
             async with httpx.AsyncClient(timeout=30) as client:

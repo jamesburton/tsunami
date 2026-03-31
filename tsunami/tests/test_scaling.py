@@ -1,11 +1,11 @@
-"""Tests for auto-scaling bee slots based on memory."""
+"""Tests for auto-scaling eddy slots based on memory."""
 
 import pytest
 from tsunami.scaling import calculate_bee_slots, MAX_BEES, MIN_BEES
 
 
 class TestCalculateBeeSlots:
-    """Memory-based bee slot calculation."""
+    """Memory-based eddy slot calculation."""
 
     def test_4gb_lite_mode(self):
         config = calculate_bee_slots(total_mem_gb=4, queen_model="9b")
