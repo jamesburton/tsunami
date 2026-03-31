@@ -292,8 +292,18 @@ class Agent:
         # Reset empty step counter on successful tool call
         self._empty_steps = 0
 
+        # Auto-promote message_info → message_result when it looks like a final answer
+        if tool_call.name == "message_info":
+            text = tool_call.arguments.get("text", "").lower()
+            is_final = any(kw in text for kw in [
+                "identified", "conclusion", "summary of findings", "failure point",
+                "complete", "results:", "answer:", "the wall", "analysis complete",
+            ])
+            if is_final:
+                log.info("Auto-promoting message_info → message_result (looks like final answer)")
+                tool_call = ToolCall(name="message_result", arguments=tool_call.arguments)
+
         # Detect repetition loop: if model keeps calling message_info
-        # it's stuck — force message_result
         if tool_call.name == "message_info":
             self._info_streak = getattr(self, '_info_streak', 0) + 1
             self._info_total = getattr(self, '_info_total', 0) + 1

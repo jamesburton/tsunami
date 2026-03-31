@@ -110,9 +110,24 @@ class SwarmAnalyze(BaseTool):
         bigrams = [f"{words[i]} {words[i+1]}" for i in range(len(words)-1)]
         common = Counter(bigrams).most_common(8)
 
+        # Write a synthesis summary alongside the raw results
+        summary_path = str(out).replace('.txt', '_summary.md')
+        with open(summary_path, 'w') as f:
+            f.write(f"# Analysis of {len(files)} files\n\n")
+            f.write(f"**Question:** {question}\n\n")
+            f.write("## Top Recurring Themes\n\n")
+            for phrase, count in common:
+                if count >= 3:
+                    f.write(f"- **{phrase}** ({count}x)\n")
+            f.write(f"\n## Sample Findings\n\n")
+            for name, answer in results[:5]:
+                f.write(f"- **{name}**: {answer[:200]}\n")
+            f.write(f"\n*Full results in {output_path}*\n")
+
         summary = f"Analyzed {len(files)} files via {MAX_WORKERS} workers.\n"
         summary += "Top themes: " + ", ".join(f'{p} ({c}x)' for p, c in common if c >= 3) + "\n"
-        summary += f"Full results: {output_path}\n"
-        summary += f"Sample: {results[0][1][:150]}" if results else ""
+        summary += f"Results saved to {output_path}\n"
+        summary += f"Summary saved to {summary_path}\n"
+        summary += "Use message_result to deliver these findings."
 
         return ToolResult(summary)
