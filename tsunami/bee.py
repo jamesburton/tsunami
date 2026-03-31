@@ -211,13 +211,24 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
         pattern = args.get("pattern", "")
         if not pattern or not isinstance(pattern, str):
             return "Error: pattern parameter required (string)"
+        if len(pattern) > 500:
+            return "Error: pattern too long (max 500 chars)"
         directory = args.get("directory", workdir)
         if not Path(directory).is_absolute():
             directory = str(Path(workdir) / directory)
+        # Sandbox: grep restricted to workdir
+        try:
+            if not str(Path(directory).resolve()).startswith(str(Path(workdir).resolve())):
+                return "BLOCKED: bees can only search within the project directory"
+        except (OSError, ValueError):
+            return "Error: invalid directory"
         try:
             proc = await asyncio.create_subprocess_exec(
                 "grep", "-rn", "--include=*.py", "--include=*.ts",
-                "--include=*.js", "--include=*.md", pattern, directory,
+                "--include=*.js", "--include=*.md",
+                "--exclude-dir=node_modules", "--exclude-dir=.git",
+                "--exclude-dir=__pycache__", "--exclude-dir=models",
+                pattern, directory,
                 stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
             )
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=15)
