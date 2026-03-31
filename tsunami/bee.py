@@ -164,6 +164,13 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
         # Block any rm -rf on root or broad paths
         if re.search(r'\brm\s+(-\w*)?r\w*f?\s+/', cmd):
             return "BLOCKED: bees cannot run recursive rm on root paths"
+        # Block network exfiltration tools
+        network_cmds = re.compile(r'\b(curl|wget|nc|ncat|netcat|socat|ssh|scp|rsync|ftp|sftp|telnet)\b')
+        if network_cmds.search(cmd):
+            return "BLOCKED: bees cannot use network tools (curl, wget, nc, ssh, etc.)"
+        # Block process backgrounding (escape from timeout)
+        if re.search(r'\bnohup\b|&\s*$|\bdisown\b', cmd):
+            return "BLOCKED: bees cannot background processes"
         from .bash_security import is_command_safe
         from .tools.shell import _check_destructive
         destructive = _check_destructive(cmd)
