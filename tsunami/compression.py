@@ -181,5 +181,8 @@ async def compress_context(state: AgentState, model: LLMModel,
         + state.conversation[compress_end:]
     )
 
+    # Post-compact cleanup: reset stale caches
+    state.error_counts.clear()  # Old error tracking is stale after compression
+
     new_tokens = estimate_tokens(state)
     log.info(f"Compressed context: {len(to_compress)} messages → 1 summary ({new_tokens} est. tokens)")
