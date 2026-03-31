@@ -92,6 +92,17 @@ class ShellExec(BaseTool):
         if warning and warning.startswith("BLOCKED"):
             return ToolResult(warning, is_error=True)
 
+        # Bash security validation (24 checks from Claude Code's bashSecurity.ts)
+        from ..bash_security import is_command_safe
+        is_safe, sec_warnings = is_command_safe(command)
+        if not is_safe:
+            return ToolResult(
+                f"BLOCKED: Security check failed: {'; '.join(sec_warnings)}",
+                is_error=True,
+            )
+        if sec_warnings:
+            log.warning(f"Bash security warnings for '{command[:80]}': {sec_warnings}")
+
         try:
             # Resolve workdir — default to the ark directory
             import os
