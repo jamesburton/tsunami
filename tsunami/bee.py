@@ -171,41 +171,43 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
             return "Error: command parameter required (string)"
         if len(cmd) > 2000:
             return "Error: command too long (max 2000 chars)"
-        # Bash security — bees get stricter checks than queen
-        import re
-        # Block ALL rm commands — bees are read-only, rm has no legitimate use
-        if re.search(r'\brm\b', cmd):
-            return "BLOCKED: bees cannot delete files"
-        # Block network exfiltration tools
-        network_cmds = re.compile(r'\b(curl|wget|nc|ncat|netcat|socat|ssh|scp|rsync|ftp|sftp|telnet)\b')
-        if network_cmds.search(cmd):
-            return "BLOCKED: bees cannot use network tools (curl, wget, nc, ssh, etc.)"
-        # Block interpreters (can bypass all other checks via import)
-        interp_cmds = re.compile(r'\b(python3?|python2|node|ruby|perl|php|lua|java\b|scala)\s')
-        if interp_cmds.search(cmd):
-            return "BLOCKED: bees cannot launch interpreters (use tools directly instead)"
-        # Block process backgrounding (escape from timeout)
-        if re.search(r'\bnohup\b|&\s*$|\bdisown\b', cmd):
-            return "BLOCKED: bees cannot background processes"
-        # Block env dumping (can leak API keys, tokens, credentials)
-        if re.search(r'^\s*(env|printenv|set|export)\s*$|^\s*(env|printenv)\b', cmd):
-            return "BLOCKED: bees cannot dump environment variables"
-        # Block git credential/config access (can leak tokens)
-        if re.search(r'\bgit\s+(config|credential)\b', cmd):
-            return "BLOCKED: bees cannot access git config/credentials"
-        # Block file writes via shell (redirects, sed -i, tee, dd, mv, cp, etc.)
-        if re.search(r'(?<!\|)\s*>\s*[^&]|>>', cmd):  # output redirect (not pipe)
-            return "BLOCKED: bees are read-only (cannot redirect output to files)"
-        if re.search(r'\bsed\s+.*-i\b|\btee\b|\bdd\b|\bmv\b|\bcp\b|\bmkdir\b|\btouch\b|\bchmod\b|\bchown\b|\binstall\b|\bln\b|\bmkfifo\b|\bmknod\b', cmd):
-            return "BLOCKED: bees are read-only (cannot modify filesystem via shell)"
-        from .bash_security import is_command_safe
-        from .tools.shell import _check_destructive
-        destructive = _check_destructive(cmd)
-        if destructive and destructive.startswith("BLOCKED"):
-            return destructive
-        is_safe, warnings = is_command_safe(cmd)
-        if not is_safe:
-            return f"BLOCKED: {'; '.join(warnings)}"
+        # ALLOWLIST — bees can ONLY run these commands
+        # Round 12 lesson: blocklists fail. A jailbreak ran 'rm -rf tsunami/'
+        # and deleted the entire codebase. Allowlist is the only safe model.
+        import re, shlex
+        ALLOWED_COMMANDS = frozenset({
+            'ls', 'cat', 'head', 'tail', 'wc', 'grep', 'egrep', 'fgrep', 'pwd',
+            'find', 'sort', 'uniq', 'cut', 'awk', 'tr', 'diff', 'comm',
+            'file', 'stat', 'du', 'df', 'basename', 'dirname', 'realpath',
+            'git', 'echo', 'printf', 'test', 'true', 'false', 'seq',
+            'xargs', 'tac', 'rev', 'nl', 'paste', 'column', 'md5sum',
+            'sha256sum', 'base64', 'od', 'hexdump', 'strings',
+        })
+        # Git sub-commands allowed (read-only)
+        ALLOWED_GIT = frozenset({
+            'log', 'status', 'diff', 'show', 'branch', 'tag',
+            'blame', 'shortlog', 'rev-parse', 'ls-files', 'ls-tree',
+        })
+        # Extract the first command in the pipeline
+        # Split on pipes, check each segment
+        segments = re.split(r'\s*\|\s*', cmd)
+        for seg in segments:
+            seg = seg.strip()
+            if not seg:
+                continue
+            # Get the first word (the command)
+            first_word = re.split(r'\s+', seg)[0]
+            if first_word not in ALLOWED_COMMANDS:
+                return f"BLOCKED: '{first_word}' is not in the bee allowlist. Allowed: ls, cat, head, tail, wc, grep, find, sort, git, etc."
+            # Git sub-command check
+            if first_word == 'git':
+                parts = re.split(r'\s+', seg)
+                sub = parts[1] if len(parts) > 1 else ''
+                if sub and sub not in ALLOWED_GIT:
+                    return f"BLOCKED: 'git {sub}' is not allowed for bees. Allowed: git log/status/diff/show/branch/blame"
+        # Still block output redirects (even with allowed commands)
+        if re.search(r'(?<!\|)\s*>\s*[^&]|>>', cmd):
+            return "BLOCKED: bees cannot redirect output to files"
         try:
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE,
