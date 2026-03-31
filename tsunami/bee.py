@@ -191,26 +191,33 @@ async def _execute_bee_tool(name: str, args: dict, workdir: str) -> str:
             'log', 'status', 'diff', 'show', 'branch', 'tag',
             'blame', 'shortlog', 'rev-parse', 'ls-files', 'ls-tree',
         })
-        # Extract the first command in the pipeline
-        # Split on pipes, check each segment
+        # Block shell metacharacters that enable code execution
+        # Subshells $() and backticks execute before we can check
+        if re.search(r'\$\(|`|;\s*\w|&&|#', cmd):
+            return "BLOCKED: bees cannot use subshells, command chaining, or comments"
+        # Block output redirects
+        if re.search(r'>\s*[^&]|>>', cmd):
+            return "BLOCKED: bees cannot redirect output to files"
+        # Block absolute paths outside workdir (data leakage prevention)
+        # Allow /dev/null only
+        abs_paths = re.findall(r'(?<!\w)/(?:etc|proc|home|root|tmp|var|sys|boot|opt|usr|mnt|srv|run)\b', cmd)
+        if abs_paths:
+            return f"BLOCKED: bees cannot access system paths ({abs_paths[0]})"
+        # Extract the first command in each pipeline segment
         segments = re.split(r'\s*\|\s*', cmd)
         for seg in segments:
             seg = seg.strip()
             if not seg:
                 continue
-            # Get the first word (the command)
             first_word = re.split(r'\s+', seg)[0]
             if first_word not in ALLOWED_COMMANDS:
-                return f"BLOCKED: '{first_word}' is not in the bee allowlist. Allowed: ls, cat, head, tail, wc, grep, find, sort, git, etc."
+                return f"BLOCKED: '{first_word}' is not in the bee allowlist. Allowed: ls, cat, head, tail, wc, grep, sort, git, etc."
             # Git sub-command check
             if first_word == 'git':
                 parts = re.split(r'\s+', seg)
                 sub = parts[1] if len(parts) > 1 else ''
                 if sub and sub not in ALLOWED_GIT:
                     return f"BLOCKED: 'git {sub}' is not allowed for bees. Allowed: git log/status/diff/show/branch/blame"
-        # Still block output redirects (even with allowed commands)
-        if re.search(r'(?<!\|)\s*>\s*[^&]|>>', cmd):
-            return "BLOCKED: bees cannot redirect output to files"
         try:
             proc = await asyncio.create_subprocess_shell(
                 cmd, stdout=asyncio.subprocess.PIPE,
